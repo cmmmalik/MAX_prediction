@@ -255,3 +255,12 @@ class Rows:
     @property
     def energies(self):
         return [r.energy for r in self.rows]
+
+
+class DummyRow(AtomsRow):
+
+    def __init__(self, numbers: list or tuple, energy: float = None, keys_value_paris: dict = None, **kwargs):
+        dct = {"numbers": numbers, "key_value_pairs": {"energy": energy}}
+        dct["key_value_pairs"].update(keys_value_paris)
+        dct.update(kwargs)
+        super(DummyRow, self).__init__(dct=dct)
