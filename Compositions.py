@@ -238,7 +238,7 @@ class Elements(Species):
         index = self._find_index_name(name=key)
         if len(index) > 1:
             raise ValueError("Can only set a single Corespecie, instead of multiple Species")
-        self._composition[index] = value
+        self._composition[index[0]] = value
 
     def __repr__(self):
         sst = ["elements={}".format(self.els)]
