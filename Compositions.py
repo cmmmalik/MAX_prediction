@@ -80,7 +80,7 @@ class CoreSpecies:
         if isinstance(index, int):
             return self._composition[index]
 
-        return self._find_index_name(index)
+        return self._find_from_name(index)
 
     def _find_from_name(self, index):
 
