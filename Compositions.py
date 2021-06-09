@@ -80,14 +80,21 @@ class CoreSpecies:
         if isinstance(index, int):
             return self._composition[index]
 
-        index = np.where(self.formula == index)[0]
-        if index.size == 0:
-            raise KeyError("'{}' key was not found".format(index))
+        return self._find_index_name(index)
 
-        elif len(index) > 1:
+    def _find_from_name(self, index):
+
+        index = self._find_index_name(index)
+        if len(index) > 1:
             return [self._composition[i] for i in index]
 
         return self._composition[index[0]]
+
+    def _find_index_name(self, name):
+        index = np.where(self.formula == name)[0]
+        if index.size == 0:
+            raise KeyError("'{}' key was not found".format(index))
+        return index
 
     @property
     def formula(self):
@@ -221,6 +228,17 @@ class Elements(Species):
     @property
     def els(self):
         return self._formula
+
+    def __setitem__(self, key, value):
+        value = CoreSpecie(value)
+        if isinstance(key, int):
+            self._composition[key] = value
+            return
+
+        index = self._find_index_name(name=key)
+        if len(index) > 1:
+            raise ValueError("Can only set a single Corespecie, instead of multiple Species")
+        self._composition[index] = value
 
     def __repr__(self):
         sst = ["elements={}".format(self.els)]
