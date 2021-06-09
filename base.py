@@ -347,8 +347,11 @@ class MAXAnalyzer(MAXSpecies):
             print("After filter")
             print(self.side_phases_df)
         self.side_phases_df.reset_index(drop=True, inplace=True)
-        elemental_energies = {specie.formula: round(specie.energy_per_formula, 4) for specie in
-                              self.Elements.composition}
+        elemental_energies = {specie.formula: round(specie.energy_per_atom, 4) for specie in
+                              self.Elements.composition}  # peratom energies, since for molecules,
+        # per formula energies, will be numberofatomsinamolecule*energy_per_atom, just a hack at the moment
+        # TODo: Convert the cohesive function to take proper molecular elements instead of atomic molecules,
+
         Pandasutils.add_total_energyfrom_formation_df(self.side_phases_df, elemental_energies=elemental_energies)
         self.append_elements_side_df(elemental_energies=elemental_energies)
         if self.verbosity >= 1:
@@ -363,7 +366,7 @@ class MAXAnalyzer(MAXSpecies):
             elrows = self.search_elements(elementfilterfunc=elementfilterfunc)
             self.Elements.set_rows(rowsdict=elrows)
         else:
-            warnings.warn("Elements  are already obtained from the database")
+            warnings.warn("Elements are already obtained from the database")
 
         if correction:
             NotImplementedError("Corrections to the total energy from database row are not implemented")
@@ -561,7 +564,9 @@ class MAXAnalyzer(MAXSpecies):
                 warnings.warn("System {} does not exist in the local database\nlooking in mp online database"
                               .format(syes))
                 if check_online:
-                    entries = smp.get_entries(syes, property_data=["formation_energy_per_atom", "spacegroup"])
+                    entries = smp.get_entries(syes, property_data=["formation_energy_per_atom",
+                                                                   "spacegroup",
+                                                                   "e_above_hull"])
                 if entries:
                     print("Found the entries for system")
             Entries[syes] = entries
