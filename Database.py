@@ -267,7 +267,7 @@ class DummyRow(AtomsRow):
         super(DummyRow, self).__init__(dct=dct)
 
     def __repr__(self):
-        super(DummyRow, self).__repr__()
+        return super(DummyRow, self).__repr__()
 
     def __str__(self):
         super(DummyRow, self).__str__()
