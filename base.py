@@ -115,6 +115,11 @@ class MAXSpecies(Species):
         return self._rowsdict
 
     def search_in_asedb(self, asedb: str or dBcore = None):
+        if self.rowsdict:
+            warnings.warn("ASE database has already been searched and relevant entries are already accessible, "
+                          "I am exiting!")
+            return
+
         rowsdict = super(MAXSpecies, self).search_in_asedb(asedb=asedb)
         self._rowsdict = rowsdict
 
@@ -292,6 +297,16 @@ class MAXAnalyzer(MAXSpecies):
         self.setup_predict(elementfilterfunc=elementfilterfunc, sizes=sizes, mpkey=mpkey, check_online=check_online,
                            solvers_check=solvers_check)
         self._predict()
+
+        stable, unstable = self._get_stable_unstable()
+        return stable, unstable
+
+    def _predict(self):
+        self.calcadd_enthalpyreactions()
+        self.add_enthalpyperatom()
+
+    def _get_stable_unstable(self):
+        # a hack, dividing functions into subfunctions,
         bol = self.reactions_df.enthalpy > 0
         unstable = self.reactions_df.loc[:, "product_0"][bol].unique()
         stable = self.reactions_df.loc[:, "product_0"][~bol].unique()
@@ -304,13 +319,8 @@ class MAXAnalyzer(MAXSpecies):
             print(unstable)
             print("Stable")
             print(stable)
-
-        assert len(stable) + len(unstable) == len(self.formula)
-        return stable, unstable
-
-    def _predict(self):
-        self.calcadd_enthalpyreactions()
-        self.add_enthalpyperatom()
+            assert len(stable) + len(unstable) == len(self.formula)
+            return stable, unstable
 
     def setup_predict(self, elementfilterfunc=None, sizes: list or tuple or None = (2, 3), mpkey: str = None,
                       check_online: str = True, solvers_check: bool = True, decimal: int = 4):
@@ -349,6 +359,22 @@ class MAXAnalyzer(MAXSpecies):
         # search in the databses
         assert self.maxdb and self.elementdb
         self.search_in_asedb(asedb=self.maxdb)
+        if not self.Elements.rows:
+            elrows = self.search_elements(elementfilterfunc=elementfilterfunc)
+            self.Elements.set_rows(rowsdict=elrows)
+        else:
+            warnings.warn("Elements  are already obtained from the database")
+
+        if correction:
+            NotImplementedError("Corrections to the total energy from database row are not implemented")
+
+        self.create_set_maxphase_dataframe(decimal=decimal)
+
+        if self.verbosity >= 1:
+            print(self.max_df)
+
+    def search_elements(self, elementfilterfunc=None):
+
         elrows = self.Elements.search_in_asedb(asedb=self.elementdb)
         if elementfilterfunc:
             elrows = {k: elementfilterfunc(rows) for k, rows in elrows.items()}
@@ -359,14 +385,7 @@ class MAXAnalyzer(MAXSpecies):
                     raise ValueError("More than one rows of element: {} are found in the database."
                                      "Supply elementfilterfunction".format(el))
 
-        self.Elements.set_rows(rowsdict=elrows)
-        if correction:
-            NotImplementedError("Corrections to the total energy from database row are not implemented")
-
-        self.create_set_maxphase_dataframe(decimal=decimal)
-
-        if self.verbosity >= 1:
-            print(self.max_df)
+        return elrows
 
     def MPDatabase_lookup(self, sizes=[2, 3], mpkey: str = None, check_online=True):
         if not self.database.collection:
