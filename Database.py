@@ -265,3 +265,9 @@ class DummyRow(AtomsRow):
             dct["key_value_pairs"].update(keys_value_paris)
         dct.update(kwargs)
         super(DummyRow, self).__init__(dct=dct)
+
+    def __repr__(self):
+        super(DummyRow, self).__repr__()
+
+    def __str__(self):
+        super(DummyRow, self).__str__()
