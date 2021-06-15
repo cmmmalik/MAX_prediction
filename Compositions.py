@@ -36,9 +36,22 @@ class CoreSpecie:
         self._composition = Composition(form)
         self._formula = form
 
+    @formula.deleter
+    def formula(self):
+        del self._formula
+        del self.composition
+
     @property
     def composition(self):
         return self._composition
+
+    @composition.deleter
+    def composition(self):
+        del self._composition
+        if self.row:
+            del self.row
+        if self.entries:
+            del self.entries
 
     @property
     def row(self):
@@ -51,9 +64,17 @@ class CoreSpecie:
         else:
             raise ValueError("Expected an instance of {}, instead got {}".format(AtomsRow, type(row)))
 
+    @row.deleter
+    def row(self):
+        del self._row
+
     @property
     def entries(self):
         return self._entries
+
+    @entries.deleter
+    def entries(self):
+        del self._entries
 
     @property
     def energy_per_formula(self):
@@ -81,6 +102,21 @@ class CoreSpecies:
             return self._composition[index]
 
         return self._find_from_name(index)
+
+    def __delitem__(self, key):
+        def _delete(index):
+            mask = np.ones(self.formula.shape, dtype=bool)
+            mask[index] = False
+            self._formula = self.formula[mask]
+            if isinstance(index, int):
+                index = [index]
+            del [self.composition[k] for k in index]
+
+        if isinstance(key, (int, list)):
+            _delete(index=key)
+        else:
+            index = self._find_index_name(name=key)
+            _delete(index=index)
 
     def _find_from_name(self, index):
 

@@ -99,7 +99,7 @@ class MAXSpecies(Species):
                                          verbosity=verbosity)
         # reset formulas again
         self.formula = formulas
-        self._rowsdict = None
+        # self._rowsdict = None
 
     @property
     def formula(self):
@@ -107,32 +107,69 @@ class MAXSpecies(Species):
 
     @formula.setter
     def formula(self, value):
+        if np.unique(value) != np.sort(value):
+            raise ValueError("formulas contain duplicates")
         self._composition = [MAXSpecie(i) for i in value]
         self._formula = np.asarray(value)
 
-    @property
-    def rowsdict(self):
-        return self._rowsdict
+    # @property
+    # def rowsdict(self):
+    #     return self._rowsdict
 
     def search_in_asedb(self, asedb: str or dBcore = None):
-        if self.rowsdict:
+        if self.rows:
             warnings.warn("ASE database has already been searched and relevant entries are already accessible, "
                           "I am exiting!")
             return
 
         rowsdict = super(MAXSpecies, self).search_in_asedb(asedb=asedb)
-        self._rowsdict = rowsdict
+        return rowsdict
 
+    def search_set_rows(self, asedb: str or dBcore = None):
+        rowsdict = self.search_in_asedb(asedb=asedb)
+        self.set_rows(rowsdict=rowsdict)
+
+    def refined_formulas_search_rows(self, asedb: str or dBcore = None):
+        rowsdict = self.search_in_asedb(asedb=asedb)
+        self._refine_formulas(rowsdict)
+
+    def _refine_formulas(self, rowsdict):
+        rrows = []
+        toremoveindex = []
         for i, f in enumerate(self.formula):
             row = rowsdict[f]
-            if len(row) > 1:
-                raise RuntimeError("Found more than one rows for a composition {}".format(f))
+            if isinstance(row, (list, tuple)):
+                if len(row) > 1:
+                    raise RuntimeError("Found more than one rows for a composition {}".format(f))
+                elif len(row) == 0:
+                    toremoveindex.append(f)
+                    continue
+                else:
+                    row = row[0]
+            assert row
+            self.composition[i].row = row
+            rrows.append(self.composition[i].row)
+
+        for i in toremoveindex:
+            del self[i]
+
+    def set_rows(self, rowsdict: dict):
+        rrows = []
+        for i, f in enumerate(self.formula):
+            row = rowsdict[f]
+            if isinstance(row, (list, tuple)):
+                if len(row) > 1:
+                    raise RuntimeError("Found more than one rows for a composition {}".format(f))
+                assert len(row) == 1
+                row = row[0]
             if self.verbosity >= 2:
                 print("Debug:")
                 print("No:{}\nformula:{}\nRow:{}".format(i, f, row))
-            assert len(row) == 1
-            self.composition[i].row = row[0]
-        return rowsdict
+            assert row
+            self.composition[i].row = row
+            rrows.append(self.composition[i].row)
+
+        self._rows = rrows
 
     def generate_unique_systems(self, sizes: list or tuple):
         return np.unique([specie.generate_unique_systems(sizes=sizes) for specie in self._composition])
