@@ -107,7 +107,7 @@ class MAXSpecies(Species):
 
     @formula.setter
     def formula(self, value):
-        if np.unique(value) != np.sort(value):
+        if (np.unique(value) != np.sort(value)).all():
             raise ValueError("formulas contain duplicates")
         self._composition = [MAXSpecie(i) for i in value]
         self._formula = np.asarray(value)
