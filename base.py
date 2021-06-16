@@ -207,6 +207,7 @@ class MAXAnalyzer(MAXSpecies):
             self.elementdb = elementdb
         if maxdb:
             self.maxdb = maxdb
+            self.asedb = maxdb
 
     def __len__(self):
         return self.formula.__len__()
