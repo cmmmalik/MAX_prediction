@@ -129,8 +129,8 @@ class MAXSpecies(Species):
         rowsdict = self.search_in_asedb(asedb=asedb)
         self.set_rows(rowsdict=rowsdict)
 
-    def refined_formulas_search_rows(self, asedb: str or dBcore = None):
-        rowsdict = self.search_in_asedb(asedb=asedb)
+    def refined_formulas_search_rows(self):
+        rowsdict = self.search_in_asedb(asedb=self.asedb)
         self._refine_formulas(rowsdict)
 
     def _refine_formulas(self, rowsdict):
