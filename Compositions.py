@@ -228,11 +228,12 @@ class Species(CoreSpecies):
                                        collection_name=collection_name)
 
     def search_in_asedb(self, asedb: str or dBcore = None):
+        assert self.asedb or asedb
         if self.asedb is None and asedb is not None:
             self.asedb = asedb
-        else:
-            raise ValueError("asedb is not found '{}' and was not provided '{}',"
-                             " cannot search the database".format(self.asedb, asedb))
+            # raise ValueError("asedb is not found '{}' and was not provided '{}',"
+            #                  " cannot search the database".format(self.asedb, asedb))
+
         rowsdict = self.asedb.get_formulas(formulas=self.formula)
         return rowsdict
 
