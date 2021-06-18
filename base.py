@@ -129,8 +129,8 @@ class MAXSpecies(Species):
         rowsdict = self.search_in_asedb(asedb=asedb)
         self.set_rows(rowsdict=rowsdict)
 
-    def refined_formulas_search_rows(self):
-        rowsdict = self.search_in_asedb(asedb=self.asedb)
+    def refined_formulas_search_rows(self, asedb: str or dBcore = None):
+        rowsdict = self.search_in_asedb(asedb=asedb)
         self._refine_formulas(rowsdict)
 
     def _refine_formulas(self, rowsdict):
@@ -142,7 +142,7 @@ class MAXSpecies(Species):
                 if len(row) > 1:
                     raise RuntimeError("Found more than one rows for a composition {}".format(f))
                 elif len(row) == 0:
-                    toremoveindex.append(f)
+                    toremoveindex.append(i)
                     continue
                 else:
                     row = row[0]
