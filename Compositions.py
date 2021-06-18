@@ -110,8 +110,9 @@ class CoreSpecies:
             self._formula = self.formula[mask]
             if isinstance(index, int):
                 index = [index]
-            for k in index:
-                del self._composition[k]
+
+        #          for k in index:
+        #          del self.composition[k]
 
         if isinstance(key, (int, list)):
             _delete(index=key)
@@ -228,8 +229,11 @@ class Species(CoreSpecies):
                                        collection_name=collection_name)
 
     def search_in_asedb(self, asedb: str or dBcore = None):
-        if asedb:
+        assert self.asedb or asedb
+        if self.asedb is None and asedb is not None:
             self.asedb = asedb
+            # raise ValueError("asedb is not found '{}' and was not provided '{}',"
+            #                  " cannot search the database".format(self.asedb, asedb))
 
         rowsdict = self.asedb.get_formulas(formulas=self.formula)
         return rowsdict
