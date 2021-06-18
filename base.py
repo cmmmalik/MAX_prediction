@@ -6,12 +6,12 @@ from itertools import combinations as itcombinations
 import cohesive
 import numpy as np
 from MAX_prediction.Compositions import Genchemicalsystems, Elements, Species, CoreSpecie
+from Simtools.analysis.chemical_equations import equation_balancer_v1, LinearlydependentMatrix
+from Simtools.composition_utils import MAXcomp, Composition as Pycomp
+from Simtools.ext.materials_project import SmartMPRester
 from ase.db.core import Database as dBcore
 from chempy import balance_stoichiometry
 from colorama import Fore, Back, init
-from mse.analysis.chemical_equations import equation_balancer_v1, LinearlydependentMatrix
-from mse.composition_utils import MAXcomp, Composition as Pycomp
-from mse.ext.materials_project import SmartMPRester
 from pandas import DataFrame, notna, Series
 from pymatgen.core.composition import Composition  as Pymcomp
 
