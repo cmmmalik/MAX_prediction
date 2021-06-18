@@ -150,8 +150,10 @@ class MAXSpecies(Species):
             self.composition[i].row = row
             rrows.append(self.composition[i].row)
 
-        for i in toremoveindex:
-            del self[i]
+        del self[toremoveindex]
+        # safe inspect again
+        for f, c in zip(self.formula, self.composition):
+            assert f == c.formula
 
     def set_rows(self, rowsdict: dict):
         rrows = []

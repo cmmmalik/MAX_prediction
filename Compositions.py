@@ -110,8 +110,8 @@ class CoreSpecies:
             self._formula = self.formula[mask]
             if isinstance(index, int):
                 index = [index]
-            for k in index:
-                del self._composition[k]
+            for i in sorted(index, reverse=True):
+                del self._composition[i]
 
         if isinstance(key, (int, list)):
             _delete(index=key)
