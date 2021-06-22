@@ -359,8 +359,8 @@ class MAXAnalyzer(MAXSpecies):
             print(unstable)
             print("Stable")
             print(stable)
-            assert len(stable) + len(unstable) == len(self.formula)
-            return stable, unstable
+        assert len(stable) + len(unstable) == len(self.formula)
+        return stable, unstable
 
     def setup_predict(self, elementfilterfunc=None, sizes: list or tuple or None = (2, 3), mpkey: str = None,
                       check_online: str = True, solvers_check: bool = True, decimal: int = 4):
@@ -401,7 +401,8 @@ class MAXAnalyzer(MAXSpecies):
     def ASEDatabase_lookup(self, elementfilterfunc=None, correction: bool = False, decimal: int = 4):
         # search in the databses
         assert self.maxdb and self.elementdb
-        self.search_in_asedb(asedb=self.maxdb)
+        self.search_set_rows(asedb=self.maxdb)
+
         if not self.Elements.rows:
             elrows = self.search_elements(elementfilterfunc=elementfilterfunc)
             self.Elements.set_rows(rowsdict=elrows)
