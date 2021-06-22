@@ -4,7 +4,8 @@ from itertools import combinations as itcombinations
 import numpy as np
 from MAX_prediction.Database import SearcherdB, Search_Engine, Row
 from ase.db.core import Database as dBcore, AtomsRow
-from preprocessing.atoms import Composition
+# from mse.composition_utils import EnhancedComposition as Composition
+from pymatgen.core.composition import Composition
 from pymatgen.core.periodic_table import Element as Elts
 
 
