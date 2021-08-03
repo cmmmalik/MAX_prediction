@@ -257,6 +257,36 @@ class Rows:
         return [r.energy for r in self.rows]
 
 
+class Entry:
+
+    def __init__(self, entry: ComputedEntry or ComputedStructureEntry):
+        self._entry = entry
+
+    @property
+    def entry(self):
+        return self._entry
+
+    @entry.setter
+    def entry(self, entry: ComputedEntry or ComputedStructureEntry):
+        if not isinstance(entry, (ComputedEntry, ComputedStructureEntry)):
+            raise ValueError("'entry' must be have type {} or {}, instead received {}".format(ComputedEntry,
+                                                                                              ComputedStructureEntry,
+                                                                                              type(entry)))
+        self._entry = entry
+
+    @property
+    def energy(self):
+        return self.entry.energy
+
+    @property
+    def energy_per_atom(self):
+        return self.energy / self.entry.composition.num_atoms
+
+    @property
+    def energy_per_formula(self):
+        return self.energy_per_atom * self.entry.composition.reduced_composition.num_atoms
+
+
 class DummyRow(AtomsRow):
 
     def __init__(self, numbers: list or tuple, energy: float = None, keys_value_paris: dict = None, **kwargs):
