@@ -790,7 +790,11 @@ class MAXAnalyzer(MAXSpecies):
         return self._genchsys
 
     def insert_energy_column(self):
-        en = dict(zip(self.side_phases_df["phase"], self.side_phases_df[self.side_phase_formation_colname]))
+        """Adds energy columns in the reaction dataframe. The energy column named as 'total_energy_per_formula' is
+        taken from side phase dataframe. This energy represents GPAW-calculated or determined (from formation energies).
+        The method also adds MAX phase energies, present in the column 'energy_per_formula'.
+        """
+        en = dict(zip(self.side_phases_df["phase"], self.side_phases_df["total_energy_per_formula"]))
 
         if self.verbosity >= 2:
             print(en)
