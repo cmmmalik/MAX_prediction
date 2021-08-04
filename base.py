@@ -195,6 +195,7 @@ class MAXAnalyzer(MAXSpecies):
 
         self._side_phase_df = None
         self._side_phase_formation_colname = "uncorr_formation_energy_per_formula"
+        self._side_phase_calculate_formation_energy = False
         self._max_df = None
         self._entries = None
         self._reactions_df = None
@@ -233,6 +234,16 @@ class MAXAnalyzer(MAXSpecies):
     @property
     def max_mapping(self):
         return [comp.elementsmap for comp in self.composition]
+
+    @property
+    def side_phase_calculate_formation_energy(self):
+        return self._side_phase_calculate_formation_energy
+
+    @side_phase_calculate_formation_energy.setter
+    def side_phase_calculate_formation_energy(self, value: bool):
+        if not isinstance(value, bool):
+            raise ValueError("Expected only boolean type values, instead received {}".format(type(value)))
+        self._side_phase_calculate_formation_energy = value
 
     @property
     def chemicalsystems(self):
@@ -394,7 +405,7 @@ class MAXAnalyzer(MAXSpecies):
             print(reactions)
 
     def setup_sidephase(self, sizes: list or tuple or None = (2, 3), mpkey: str = None, check_online: bool = True,
-                        calculate_formation_energy: bool = True):
+                        ):
         """
         Looks for the side phases by chemical systems based on provided sizes(list, default 2 and 3 ),
         in the local database first. If an entry is not in the local database, search is done in the online materials
@@ -406,7 +417,6 @@ class MAXAnalyzer(MAXSpecies):
         :param sizes:
         :param mpkey:
         :param check_online:
-        :param calculate_formation_energy:
         :return:
         """
 
@@ -418,7 +428,7 @@ class MAXAnalyzer(MAXSpecies):
             print(self.side_phases_df)
         self.side_phases_df.reset_index(drop=True, inplace=True)
 
-        if calculate_formation_energy or self.side_phase_formation_colname == "calc_formation_energy_per_formula":
+        if self.side_phase_calculate_formation_energy or self.side_phase_formation_colname == "calc_formation_energy_per_formula":
             self.add_calculate_formation_energy_sidephases()
 
         # peratom energies, since for molecules,
