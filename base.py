@@ -444,7 +444,7 @@ class MAXAnalyzer(MAXSpecies):
 
     def add_calculate_formation_energy_sidephases(self):
 
-        elemental_entry_energies = {specie.formula: round(specie.energy_per_formula_in_entry, self.decimtol)
+        elemental_entry_energies = {specie.formula: round(specie.energy_per_atom_in_entry, self.decimtol)
                                     for specie in self.Elements.composition}  # peratom energies is safe parameter for
         # both molecules and bulk for calculating formation energies.
         Form_en = Pandasutils.add_calculate_formation_energy_df(self.side_phases_df,
@@ -501,7 +501,7 @@ class MAXAnalyzer(MAXSpecies):
 
         return elrows
 
-    def search_elements_mp(self, sort_by_e_above_hull: bool = True, elementfilter=None):
+    def set_search_elements_mp(self, sort_by_e_above_hull: bool = True, elementfilter=None):
         """
         Searches the local mongo database for elements.It will look for entries matching a given formula.
         Be aware that the that the database connection must be established before using this method.
@@ -519,7 +519,7 @@ class MAXAnalyzer(MAXSpecies):
                 raise ValueError("More than one rows of element: {} are found in the MP Database."
                                  "Supply elementfilterfunction".format(el))
 
-        return elentries
+        self.Elements.set_entries(elentries)
 
     def MPDatabase_lookup(self, sizes=[2, 3], mpkey: str = None, check_online=True):
         if not self.database.collection:
