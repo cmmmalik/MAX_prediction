@@ -989,7 +989,7 @@ class Pandasutils:
                                           en_colname: str = "total_energy_per_formula",
                                           ):
 
-        calc_energy = df.apply(cls.get_formation_energy_df, axis=1, elementa_energies=elemental_energies,
+        calc_energy = df.apply(cls.get_formation_energy_df, axis=1, elemental_energies=elemental_energies,
                                en_colname=en_colname)
         if inplace:
             df["calc_formation_energy_pf"] = calc_energy
