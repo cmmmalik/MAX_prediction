@@ -262,6 +262,12 @@ class Entry:
     def __init__(self, entry: ComputedEntry or ComputedStructureEntry):
         self._entry = entry
 
+    def __repr__(self):
+        return self._entry.__repr__()
+
+    def __str__(self):
+        self._entry.__str__()
+
     @property
     def entry(self):
         return self._entry
