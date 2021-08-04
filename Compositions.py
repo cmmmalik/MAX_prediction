@@ -8,6 +8,7 @@ from mse.ext.materials_project import SmartMPRester
 # from mse.composition_utils import EnhancedComposition as Composition
 from pymatgen.core.composition import Composition
 from pymatgen.core.periodic_table import Element as Elts
+from pymatgen.entries.computed_entries import ComputedEntry, ComputedStructureEntry
 
 
 class CoreSpecie:
@@ -79,9 +80,9 @@ class CoreSpecie:
         del self._entry
 
     @entry.setter
-    def entry(self, value: Entry):
-        if isinstance(value, Entry):
-            self._entry = value
+    def entry(self, value: ComputedEntry or ComputedStructureEntry):
+        if isinstance(value, (ComputedEntry, ComputedStructureEntry)):
+            self._entry = Entry(value)
         else:
             raise ValueError("Expected an instance of {}, instead got {}".format(Entry, type(value)))
 
