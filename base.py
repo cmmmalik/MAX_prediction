@@ -513,11 +513,11 @@ class MAXAnalyzer(MAXSpecies):
         elentries = self.Elements.search_in_mpdb(sort_by_e_above_hull=sort_by_e_above_hull)
         if elementfilter:
             elentries = {k: elementfilter(entries) for k, entries in elentries.items()}
-
-        for el, entry in elentries.items():
-            if len(entry) > 1:
-                raise ValueError("More than one rows of element: {} are found in the MP Database."
-                                 "Supply elementfilterfunction".format(el))
+        else:
+            for el, entry in elentries.items():
+                if len(entry) > 1:
+                    raise ValueError("More than one rows of element: {} are found in the MP Database."
+                                     "Supply elementfilterfunction".format(el))
 
         self.Elements.set_entries(elentries)
 
