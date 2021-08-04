@@ -284,7 +284,7 @@ class MAXAnalyzer(MAXSpecies):
 
     def create_set_maxphase_dataframe(self):
         df = DataFrame(self.formula, columns=["phase"])
-        df["energy_per_formula"] = np.around(self.energies_per_formula, self.decimal)
+        df["energy_per_formula"] = np.around(self.energies_per_formula, self.decimtol)
         mapp = self.max_mapping
         for i in ["M", "A", "X"]:
             df[i] = [k[i] for k in mapp]
