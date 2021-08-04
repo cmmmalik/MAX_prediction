@@ -977,9 +977,7 @@ class Pandasutils:
     def get_formation_energy_df(df_series: Series, elemental_energies: dict, en_colname="total_energy_per_formula"):
         comp = df_series["phase"]
         comp_en = df_series[en_colname]
-        return calculate_total_energy_from_formation_energy(comp=comp,
-                                                            en=comp_en,
-                                                            elemental_energies=elemental_energies)
+        return calculate_formation_energy(comp=comp, en_comp=comp_en, elemental_energies=elemental_energies)
 
     @classmethod
     def add_calculate_formation_energy_df(cls,
