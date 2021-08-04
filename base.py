@@ -330,6 +330,7 @@ class MAXAnalyzer(MAXSpecies):
         allowed = ["uncorr_formation_energy_per_formula", "calc_formation_energy_per_formula"]
         if value not in allowed:
             raise ValueError("Got unexpected value '{}'. Allowed values are '{}'".format(value, allowed))
+        self._side_phase_formation_colname = value
 
     @property
     def max_df(self):
