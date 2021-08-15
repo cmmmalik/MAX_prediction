@@ -2,11 +2,13 @@ import re
 from itertools import combinations as itcombinations
 
 import numpy as np
-from MAX_prediction.Database import SearcherdB, Search_Engine, Row
+from MAX_prediction.Database import SearcherdB, Search_Engine, Row, Entry
 from ase.db.core import Database as dBcore, AtomsRow
+from mse.ext.materials_project import SmartMPRester
 # from mse.composition_utils import EnhancedComposition as Composition
 from pymatgen.core.composition import Composition
 from pymatgen.core.periodic_table import Element as Elts
+from pymatgen.entries.computed_entries import ComputedEntry, ComputedStructureEntry
 
 
 class CoreSpecie:
@@ -14,7 +16,7 @@ class CoreSpecie:
     def __init__(self, formula: str):
         self._composition = None
         self._row = None
-        self._entries = None
+        self._entry = None  # single entry per specie
 
         self.formula = formula
 
@@ -70,12 +72,19 @@ class CoreSpecie:
         del self._row
 
     @property
-    def entries(self):
-        return self._entries
+    def entry(self):
+        return self._entry
 
-    @entries.deleter
-    def entries(self):
-        del self._entries
+    @entry.deleter
+    def entry(self):
+        del self._entry
+
+    @entry.setter
+    def entry(self, value: ComputedEntry or ComputedStructureEntry):
+        if isinstance(value, (ComputedEntry, ComputedStructureEntry)):
+            self._entry = Entry(value)
+        else:
+            raise ValueError("Expected an instance of {}, instead got {}".format(Entry, type(value)))
 
     @property
     def energy_per_formula(self):
@@ -84,6 +93,14 @@ class CoreSpecie:
     @property
     def energy_per_atom(self):
         return self.row.energy_per_atom
+
+    @property
+    def energy_per_atom_in_entry(self):
+        return self.entry.energy_per_atom
+
+    @property
+    def energy_per_formula_in_entry(self):
+        return self.entry.energy_per_formula
 
 
 class CoreSpecies:
@@ -245,12 +262,33 @@ class Species(CoreSpecies):
 
         self._rows = rrows  # redudant .. remove this in future
 
+    def set_entries(self, entrydict: dict):
+
+        for i, f in enumerate(self.formula):
+            entry = entrydict[f]
+            self.composition[i].entry = entry
+
     def search_in_mpdb(self, sort_by_e_above_hull: bool = True):
         assert self.database
         entries = {}
         for f in self.formula:
             entries[f] = self.database.get_entries_formula(f, sort_by_e_above_hull=sort_by_e_above_hull)
         return entries
+
+    def search_in_online_mp(self, mpkey,
+                            sort_by_e_above_hull: bool = True,
+                            property_data=["formation_energy_per_atom", "spacegroup", "e_above_hull"],
+                            **kwargs):
+        smp = SmartMPRester(mpkey=mpkey)
+        Entries = {}
+        for formula in self.formula:
+            entries = smp.get_entries(formula, property_data=property_data, sort_by_e_above_hull=sort_by_e_above_hull,
+                                      **kwargs)
+            if self.verbosity >= 1:
+                print("Found entries for formula: {}\n{}".format(formula, entries))
+            Entries[formula] = entries
+
+        return Entries
 
 
 class Elements(Species):

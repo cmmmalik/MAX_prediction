@@ -190,15 +190,19 @@ class MAXAnalyzer(MAXSpecies):
                  database: str = None,
                  client=None,
                  collection_name: str = None,
+                 decimtol: int = 6,
                  verbosity: int = 1):
 
         self._side_phase_df = None
+        self._side_phase_formation_colname = "uncorr_formation_energy_per_formula"
+        self._side_phase_calculate_formation_energy = False
         self._max_df = None
         self._entries = None
         self._reactions_df = None
         self._maxdb = None
         self._elementdb = None
         self.verbosity = verbosity
+        self.decimtol = decimtol
 
         super(MAXAnalyzer, self).__init__(formulas=formulas, establish_connection=establish_connection,
                                           host=host, port=port, database=database, client=client,
@@ -230,6 +234,16 @@ class MAXAnalyzer(MAXSpecies):
     @property
     def max_mapping(self):
         return [comp.elementsmap for comp in self.composition]
+
+    @property
+    def side_phase_calculate_formation_energy(self):
+        return self._side_phase_calculate_formation_energy
+
+    @side_phase_calculate_formation_energy.setter
+    def side_phase_calculate_formation_energy(self, value: bool):
+        if not isinstance(value, bool):
+            raise ValueError("Expected only boolean type values, instead received {}".format(type(value)))
+        self._side_phase_calculate_formation_energy = value
 
     @property
     def chemicalsystems(self):
@@ -279,9 +293,9 @@ class MAXAnalyzer(MAXSpecies):
             raise ValueError("Expected '{}', instead received '{}'".format(DataFrame, type(df)))
         self._reactions_df = df
 
-    def create_set_maxphase_dataframe(self, decimal=4):
+    def create_set_maxphase_dataframe(self):
         df = DataFrame(self.formula, columns=["phase"])
-        df["energy_per_formula"] = np.around(self.energies_per_formula, decimal)
+        df["energy_per_formula"] = np.around(self.energies_per_formula, self.decimtol)
         mapp = self.max_mapping
         for i in ["M", "A", "X"]:
             df[i] = [k[i] for k in mapp]
@@ -294,8 +308,8 @@ class MAXAnalyzer(MAXSpecies):
     @staticmethod
     def Entries_to_df(entries: list or tuple):
         en_func = lambda entry: round(
-            entry.data["formation_energy_per_atom"] * entry.composition.reduced_composition.num_atoms, 4)
-        en1_func = lambda entry: round(entry.energy_per_atom * entry.composition.reduced_composition.num_atoms, 4)
+            entry.data["formation_energy_per_atom"] * entry.composition.reduced_composition.num_atoms, 6)
+        en1_func = lambda entry: round(entry.energy_per_atom * entry.composition.reduced_composition.num_atoms, 6)
         df = DataFrame([(entry.name, sys, entry.entry_id, entry.data["e_above_hull"], en_func(entry), en1_func(entry),
                          entry.correction)
                         for sys, ens in entries.items() for entry in ens],
@@ -306,6 +320,17 @@ class MAXAnalyzer(MAXSpecies):
     @property
     def side_phases_df(self):
         return self._side_phase_df
+
+    @property
+    def side_phase_formation_colname(self):
+        return self._side_phase_formation_colname
+
+    @side_phase_formation_colname.setter
+    def side_phase_formation_colname(self, value: str):
+        allowed = ["uncorr_formation_energy_per_formula", "calc_formation_energy_per_formula"]
+        if value not in allowed:
+            raise ValueError("Got unexpected value '{}'. Allowed values are '{}'".format(value, allowed))
+        self._side_phase_formation_colname = value
 
     @property
     def max_df(self):
@@ -364,9 +389,9 @@ class MAXAnalyzer(MAXSpecies):
         return stable, unstable
 
     def setup_predict(self, elementfilterfunc=None, sizes: list or tuple or None = (2, 3), mpkey: str = None,
-                      check_online: str = True, solvers_check: bool = True, decimal: int = 4):
+                      check_online: str = True, solvers_check: bool = True, ):
         self.ASEDatabase_lookup(elementfilterfunc=elementfilterfunc,
-                                decimal=decimal)  # local ase database search for MAX and Elements
+                                )  # local ase database search for MAX and Elements
         self.setup_sidephase(sizes=sizes, mpkey=mpkey,
                              check_online=check_online)  # mongo database and online MP databae search
         # for side phases
@@ -380,7 +405,22 @@ class MAXAnalyzer(MAXSpecies):
             print("Reactions")
             print(reactions)
 
-    def setup_sidephase(self, sizes: list or tuple or None = (2, 3), mpkey: str = None, check_online: str = True):
+    def setup_sidephase(self, sizes: list or tuple or None = (2, 3), mpkey: str = None, check_online: bool = True,
+                        ):
+        """
+        Looks for the side phases by chemical systems based on provided sizes(list, default 2 and 3 ),
+        in the local database first. If an entry is not in the local database, search is done in the online materials
+        project database(if check_online is set to True, default=True). Additionally, The calculation of
+        formation energy relative to elemntary can also be performed which uses uncorrected total energies of side phase and
+        elemental references. This makes sure that no correction is added into the formation energies, contrary to
+        formation energies ('uncorr_formation_energy_per_formula') obtained from materials project API always containing correction contributions.
+
+        :param sizes:
+        :param mpkey:
+        :param check_online:
+        :return:
+        """
+
         self.MPDatabase_lookup(sizes=sizes, mpkey=mpkey, check_online=check_online, )
         # filter out e_above hull greater than zero
         Pandasutils.filter_e_above_hull(self.side_phases_df)
@@ -388,18 +428,47 @@ class MAXAnalyzer(MAXSpecies):
             print("After filter")
             print(self.side_phases_df)
         self.side_phases_df.reset_index(drop=True, inplace=True)
-        elemental_energies = {specie.formula: round(specie.energy_per_atom, 4) for specie in
-                              self.Elements.composition}  # peratom energies, since for molecules,
+
+        if self.side_phase_calculate_formation_energy or self.side_phase_formation_colname == "calc_formation_energy_per_formula":
+            self.add_calculate_formation_energy_sidephases()
+
+        # peratom energies, since for molecules,
         # per formula energies, will be numberofatomsinamolecule*energy_per_atom, just a hack at the moment
         # TODo: Convert the cohesive function to take proper molecular elements instead of atomic molecules,
 
-        Pandasutils.add_total_energyfrom_formation_df(self.side_phases_df, elemental_energies=elemental_energies)
-        self.append_elements_side_df(elemental_energies=elemental_energies)
+        self.calculate_total_energy_frmformation_sp(add_elements_df=True)
+
         if self.verbosity >= 1:
             print("Final side phases:")
             print(self.side_phases_df)
 
-    def ASEDatabase_lookup(self, elementfilterfunc=None, correction: bool = False, decimal: int = 4):
+    def add_calculate_formation_energy_sidephases(self):
+
+        elemental_entry_energies = {specie.formula: round(specie.energy_per_atom_in_entry, self.decimtol)
+                                    for specie in self.Elements.composition}  # peratom energies is safe parameter for
+        # both molecules and bulk for calculating formation energies.
+        Form_en = Pandasutils.add_calculate_formation_energy_df(self.side_phases_df,
+                                                                elemental_energies=elemental_entry_energies,
+                                                                en_colname="uncorr_total_energy_pf_mp",
+                                                                inplace=False,
+                                                                )
+
+        self.side_phases_df["calc_formation_energy_per_formula"] = Form_en
+
+    def calculate_total_energy_frmformation_sp(self, add_elements_df: bool = True):
+
+        elemental_energies = {specie.formula: round(specie.energy_per_atom, self.decimtol) for specie in
+                              self.Elements.composition}
+
+        Pandasutils.add_total_energyfrom_formation_df(self.side_phases_df,
+                                                      elemental_energies=elemental_energies,
+                                                      formation_colname=self.side_phase_formation_colname,
+                                                      inplace=True)
+
+        if add_elements_df:
+            self.append_elements_side_df(elemental_energies=elemental_energies)
+
+    def ASEDatabase_lookup(self, elementfilterfunc=None, correction: bool = False):
         # search in the databses
         assert self.maxdb and self.elementdb
         self.search_set_rows(asedb=self.maxdb)
@@ -413,7 +482,7 @@ class MAXAnalyzer(MAXSpecies):
         if correction:
             NotImplementedError("Corrections to the total energy from database row are not implemented")
 
-        self.create_set_maxphase_dataframe(decimal=decimal)
+        self.create_set_maxphase_dataframe()
 
         if self.verbosity >= 1:
             print(self.max_df)
@@ -431,6 +500,26 @@ class MAXAnalyzer(MAXSpecies):
                                      "Supply elementfilterfunction".format(el))
 
         return elrows
+
+    def set_search_elements_mp(self, sort_by_e_above_hull: bool = True, elementfilter=None):
+        """
+        Searches the local mongo database for elements.It will look for entries matching a given formula.
+        Be aware that the that the database connection must be established before using this method.
+        :param sort_by_e_above_hull: bool, default True. It will sort the final entries based on energy above hull
+        :param elementfilter: : func, default None. a function that will be called upon list of entries to make a
+        selection for a specific entry.
+        :return: dict of ChemicalEntries.
+        """
+        elentries = self.Elements.search_in_mpdb(sort_by_e_above_hull=sort_by_e_above_hull)
+        if elementfilter:
+            elentries = {k: elementfilter(entries) for k, entries in elentries.items()}
+        else:
+            for el, entry in elentries.items():
+                if len(entry) > 1:
+                    raise ValueError("More than one rows of element: {} are found in the MP Database."
+                                     "Supply elementfilterfunction".format(el))
+
+        self.Elements.set_entries(elentries)
 
     def MPDatabase_lookup(self, sizes=[2, 3], mpkey: str = None, check_online=True):
         if not self.database.collection:
@@ -550,7 +639,7 @@ class MAXAnalyzer(MAXSpecies):
         elements = pr.elements
         max_side_phases = max_df.phase.loc[
             (max_df.phase != pr.formula) & (chemsys_series == "-".join(sorted(elements)))]
-        s_max_ph = side_ph_series.loc[side_chemsys_series == "-".join(sorted(elements))]
+        # s_max_ph = side_ph_series.loc[side_chemsys_series == "-".join(sorted(elements))]
 
         s_ph = side_ph_series.loc[(side_ph_series.str.contains(els["M"]))
                                   | (side_chemsys_series == els["A"])
@@ -618,18 +707,41 @@ class MAXAnalyzer(MAXSpecies):
 
         return Entries
 
-    def set_side_phase_df(self, Entries: dict, decimtol: int = 4, remove_max_comps: bool = True):
+    def set_side_phase_df(self,
+                          Entries: dict,
+                          decimtol: int = 6,
+                          remove_max_comps: bool = True):
+        """
+        Note: There is a bug in API (v.2020.0) of materialsproject in pymatgen. The correction_energy,correction etc.
+        is always found to be zero which is not the actual case.
+        Therefore, the 'uncorr' and 'corr' energies were found to be always equal. Before,
+        'uncorr_formation_energy_per_formula' was being used for calculating total energies of side phases.
+        Due to the aforementioned bug, formation energy is calculated using uncorrected total energy relative
+         to materials project elemental reference energies.
+         This quantity is denoted by 'calc_formation_energy_per_formula'.
+
+        :param Entries:
+        :param decimtol:
+        :param remove_max_comps:
+        :return:
+        """
+
         side_phase_df = DataFrame(
             [(entry.name, sys, entry.entry_id, entry.data["e_above_hull"], entry.correction_per_atom,
               entry.data["formation_energy_per_atom"],
               round(entry.data["formation_energy_per_atom"] - entry.correction_per_atom, decimtol),
               round((entry.data["formation_energy_per_atom"] - entry.correction_per_atom) *
                     entry.composition.reduced_composition.num_atoms, decimtol),
+              round(entry.uncorrected_energy_per_atom * entry.composition.reduced_composition.num_atoms, decimtol),
+              round(entry.uncorrected_energy_per_atom, decimtol),
               entry.data.get("spacegroup")["symbol"]
               ) for sys, entries in Entries.items() for entry in entries],
             columns=["phase", "chemsys", "mp-id", "e_above_hull", "correction_per_atom",
-                     "corr_formation_energy_per_atom", "formation_energy_per_atom",
-                     "formation_energy_per_formula", "spacegroup"])
+                     "corr_formation_energy_per_atom", "uncorr_formation_energy_per_atom",
+                     "uncorr_formation_energy_per_formula",
+                     "uncorr_total_energy_pf_mp",
+                     "uncorr_total_energy_pa_mp",
+                     "spacegroup"])
 
         if not remove_max_comps:
             self._side_phase_df = side_phase_df
@@ -646,12 +758,24 @@ class MAXAnalyzer(MAXSpecies):
         if self.verbosity >= 1:
             print("Common MAX Compositions:")
             print(common)
+
         side_phase_df.drop(common.index, inplace=True)
         side_phase_df.reset_index(drop=True, inplace=True)
         self._side_phase_df = side_phase_df
 
     def searchset_sidephase_df(self, sizes: list or tuple, mpkey: str = None, check_online: bool = True,
                                **entrykwargs):
+        """
+        Searches  the local mongo db database by systems with sizes of 2 and 3, if the local entry is empty.
+        The searched entries are then converted to a suitable dataframe.
+        The method searches the online mp database (default behaviour), which can be overriden by setting the argument
+        'check_online' to False.
+        :param sizes: list default [2,3], The number of elements to use in the construction of the systems.
+        :param mpkey: materials project key for searching online, incase of empty entry in local database
+        :param check_online: bool, default True, whether to check online materials project database.
+        :param entrykwargs:
+        :return:
+        """
         Entries = self.entries_by_system_database(sizes=sizes, mpkey=mpkey, check_online=check_online, **entrykwargs)
         self._entries = Entries
         self.set_side_phase_df(Entries=Entries)
@@ -667,7 +791,12 @@ class MAXAnalyzer(MAXSpecies):
         return self._genchsys
 
     def insert_energy_column(self):
+        """Adds energy columns in the reaction dataframe. The energy column named as 'total_energy_per_formula' is
+        taken from side phase dataframe. This energy represents GPAW-calculated or determined (from formation energies).
+        The method also adds MAX phase energies, present in the column 'energy_per_formula'.
+        """
         en = dict(zip(self.side_phases_df["phase"], self.side_phases_df["total_energy_per_formula"]))
+
         if self.verbosity >= 2:
             print(en)
         en.update(dict(zip(self.max_df["phase"], self.max_df["energy_per_formula"])))
@@ -710,7 +839,7 @@ class MAXAnalyzer(MAXSpecies):
                                                                 verbosity=self.verbosity)
 
     def add_enthalpyperatom(self):
-        self.reactions_df["enthalpy_per_atom"] = Pandasutils.enthalpy_peratom(self.reactions_df, decimtol=4)
+        self.reactions_df["enthalpy_per_atom"] = Pandasutils.enthalpy_peratom(self.reactions_df, decimtol=self.decimtol)
 
 
 def calculate_total_energy_from_formation_energy(comp: str, en: float, elemental_energies: dict):
@@ -719,6 +848,15 @@ def calculate_total_energy_from_formation_energy(comp: str, en: float, elemental
     energies = {el: elemental_energies[el] for el in comp.get_el_amt_dict().keys()}
     energies.update({comp.refined_iupac_formula: en})
     deltaG = cohesive.get_inverse_cohesive_energy(comp, energies=energies, verbosity=1)
+    return deltaG
+
+
+def calculate_formation_energy(comp: str, en_comp: float, elemental_energies: dict, verbosity: int = 1):
+    assert Pymcomp(comp).reduced_composition == Pymcomp(comp)
+    energies = {el: elemental_energies[el] for el in Pymcomp(comp).get_el_amt_dict().keys()}
+    energies.update({comp: en_comp})
+    deltaG = cohesive.get_cohesive_energy(comp=comp, energies=energies, verbosity=verbosity)
+
     return deltaG
 
 
@@ -754,6 +892,7 @@ class Pandasutils:
 
     @staticmethod
     def pd_calculate_reaction_energy(df_series: Series,
+                                     decimtol: int = 6,
                                      verbosity: int = 0):
         #    not_nans = df_series.notna()
         #    df_series = df_series[not_nans]
@@ -795,10 +934,10 @@ class Pandasutils:
 
         diff = np.nansum(product_sum) - np.nansum(reactant_sum)
 
-        return np.around(diff, 4)
+        return np.around(diff, decimtol)
 
     @staticmethod
-    def enthalpy_peratom(df: DataFrame, decimtol: int = 4):
+    def enthalpy_peratom(df: DataFrame, decimtol: int = 6):
         numbers = [MAXcomp(i).reduced_comp.num_atoms for i in df["product_0"]]
         return (df["enthalpy"] / numbers).round(decimtol)
 
@@ -807,24 +946,50 @@ class Pandasutils:
         side_df.drop(side_df.loc[~np.isclose(side_df["e_above_hull"], 0.0)].index, inplace=True)
 
     @staticmethod
-    def total_energyfrm_formation(df_series: Series, elemental_energies: dict):
+    def total_energyfrm_formation(df_series: Series, elemental_energies: dict,
+                                  formation_colname: str = "formation_energy_per_formula"):
         comp = df_series["phase"]
-        pseudo_en = df_series["formation_energy_per_formula"]
+        pseudo_en = df_series[formation_colname]
         return calculate_total_energy_from_formation_energy(comp=comp,
                                                             en=-pseudo_en,
                                                             elemental_energies=elemental_energies)
 
     @classmethod
-    def add_total_energyfrom_formation_df(cls, df, elemental_energies: dict, inplace: bool = True):
-        if inplace:
-            df["total_energy_per_formula"] = df.apply(cls.total_energyfrm_formation,
-                                                      axis=1,
-                                                      elemental_energies=elemental_energies)
+    def add_total_energyfrom_formation_df(cls, df, elemental_energies: dict, inplace: bool = True,
+                                          formation_colname="formation_energy_per_formula"):
 
-        return df.apply(cls.total_energyfrm_formation, axis=1, elemental_energies=elemental_energies)
+        En = df.apply(cls.total_energyfrm_formation, axis=1, elemental_energies=elemental_energies,
+                      formation_colname=formation_colname)
+
+        if inplace:
+            df["total_energy_per_formula"] = En
+            return
+
+        return En
 
     @staticmethod
     def append_elementalenergy_df(df: DataFrame, total_elements: list, elemental_energies: dict):
         out = [{"phase": el, "chemsys": el, "total_energy_per_formula": elemental_energies[el]} for el in
                total_elements]
         return df.append(DataFrame(out), ignore_index=True)
+
+    @staticmethod
+    def get_formation_energy_df(df_series: Series, elemental_energies: dict, en_colname="total_energy_per_formula"):
+        comp = df_series["phase"]
+        comp_en = df_series[en_colname]
+        return calculate_formation_energy(comp=comp, en_comp=comp_en, elemental_energies=elemental_energies)
+
+    @classmethod
+    def add_calculate_formation_energy_df(cls,
+                                          df: DataFrame,
+                                          elemental_energies: dict,
+                                          inplace: bool = True,
+                                          en_colname: str = "total_energy_per_formula",
+                                          ):
+
+        calc_energy = df.apply(cls.get_formation_energy_df, axis=1, elemental_energies=elemental_energies,
+                               en_colname=en_colname)
+        if inplace:
+            df["calc_formation_energy_pf"] = calc_energy
+            return
+        return calc_energy
