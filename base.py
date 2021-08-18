@@ -201,6 +201,7 @@ class MAXAnalyzer(MAXSpecies):
         self._reactions_df = None
         self._maxdb = None
         self._elementdb = None
+        self._side_phase_asedb = None
         self.verbosity = verbosity
         self.decimtol = decimtol
 
@@ -261,6 +262,15 @@ class MAXAnalyzer(MAXSpecies):
     def maxdb(self, db: dBcore or str):
         self._setdb(db)
         self._maxdb = db
+
+    @property
+    def side_phase_asedb(self):
+        return self._side_phase_asedb
+
+    @side_phase_asedb.setter
+    def side_phase_asedb(self, db: dBcore or str):
+        self._setdb(db)
+        self._side_phase_asedb = db
 
     @property
     def elementdb(self):
@@ -437,6 +447,10 @@ class MAXAnalyzer(MAXSpecies):
         # TODo: Convert the cohesive function to take proper molecular elements instead of atomic molecules,
 
         self.calculate_total_energy_frmformation_sp(add_elements_df=True)
+
+        ## get extra max dataframe
+        extra_sp_df = self.search_set_sp_chemsys_asedb(db=self.side_phase_asedb, exclude_overlap_rows=True)
+        self._side_phases_df = self.side_phases_df.append(extra_sp_df)
 
         if self.verbosity >= 1:
             print("Final side phases:")
@@ -753,7 +767,7 @@ class MAXAnalyzer(MAXSpecies):
             max_ph = self.max_df.phase.apply(formulafunc)
         else:
             max_ph = np.asarray([Pycomp(i).iupac_formula for i in self.formula])
-        common = side_phase_df.loc[(phases.isin(max_ph)) & (sg == "P6_3/mmc")]
+        common = side_phase_df.loc[(phases.isin(max_ph)) & (sg == "P6_3/mmc")]  # drop overlapping compositions with MAX
 
         if self.verbosity >= 1:
             print("Common MAX Compositions:")
@@ -763,16 +777,41 @@ class MAXAnalyzer(MAXSpecies):
         side_phase_df.reset_index(drop=True, inplace=True)
         self._side_phase_df = side_phase_df
 
+    def search_sidephase_chemsys_asedb(self, db: str or dBcore = None, exclude_overlap_rows: bool = True):
+        """ Searches the phases acting as side phases in the ase database, based on the chemical system of MAX . In other words,
+        searches for  any  compositions containing any of the elements present in the chemical system
+        defined by the given MAX phase(including other MAX phases) in the  local ase database."""
+
+        if not db:
+            db = self.side_phase_asedb
+        side_Rows = self.search_chemical_sytem_asedb(db=db)
+
+        if self.rows and exclude_overlap_rows == True:
+            for i, f in enumerate(self.formula):
+                id = self.composition[i].row.row.id
+                side_Rows[f] = [r for r in side_Rows[f] if r.id != id]
+        return side_Rows
+
+    def sidephase_aserows_to_df(self, rows: list or tuple):
+        sp_species = self.from_aserows(rows)
+        df = sp_species.to_dataframe(decimtol=self.decimtol)
+        df.rename(columns={"energy_per_formula": "total_energy_per_formula"})
+        return df
+
+    def search_set_sp_chemsys_asedb(self, db: str or dBcore = None, exclude_overlap_rows: bool = True):
+        rows = self.search_sidephase_chemsys_asedb(db=db, exclude_overlap_rows=exclude_overlap_rows)
+        return self.sidephase_aserows_to_df(rows=rows)
+
     def searchset_sidephase_df(self, sizes: list or tuple, mpkey: str = None, check_online: bool = True,
                                **entrykwargs):
         """
-        Searches  the local mongo db database by systems with sizes of 2 and 3, if the local entry is empty.
+        Searches the local mongo db database by systems with sizes of 2 and 3, if the local entry is empty.
         The searched entries are then converted to a suitable dataframe.
         The method searches the online mp database (default behaviour), which can be overriden by setting the argument
         'check_online' to False.
         :param sizes: list default [2,3], The number of elements to use in the construction of the systems.
         :param mpkey: materials project key for searching online, incase of empty entry in local database
-        :param check_online: bool, default True, whether to check online materials project database.
+        :param check_online: bool, default True, whether to check the online materials project database.
         :param entrykwargs:
         :return:
         """

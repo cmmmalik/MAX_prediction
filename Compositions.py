@@ -5,6 +5,7 @@ import numpy as np
 from MAX_prediction.Database import SearcherdB, Search_Engine, Row, Entry
 from ase.db.core import Database as dBcore, AtomsRow
 from mse.ext.materials_project import SmartMPRester
+from pandas import DataFrame
 # from mse.composition_utils import EnhancedComposition as Composition
 from pymatgen.core.composition import Composition
 from pymatgen.core.periodic_table import Element as Elts
@@ -53,8 +54,16 @@ class CoreSpecie:
         del self._composition
         if self.row:
             del self.row
-        if self.entries:
-            del self.entries
+        if self.entry:
+            del self.entry
+
+    @property
+    def chemical_system(self):
+        return self.composition.chemical_system
+
+    def chemical_system_sorted(self, separater=","):
+        chemsys = self.chemical_system
+        return "{}".format(separater).join(sorted(chemsys.split("-")))
 
     @property
     def row(self):
@@ -167,6 +176,12 @@ class CoreSpecies:
     @property
     def unique_formula(self):
         return np.unique(self.formula)
+
+    def to_dataframe(self, decimtol: int = 6):
+        """Only adds basic entries into the dataframe"""
+        df = DataFrame([(formula, self.composition[i].energy_per_formula, self.composition[i].chemical_system)
+                        for i, formula in self.formula], columns=["phase", "energy_per_formula", "chemsys"])
+        return df
 
 
 class Species(CoreSpecies):
@@ -289,6 +304,22 @@ class Species(CoreSpecies):
             Entries[formula] = entries
 
         return Entries
+
+    def search_chemical_sytem_asedb(self, db: dBcore or str, *args, **kwargs):
+        db = SearcherdB(db=db, verbosity=self.verbosity)
+        Rows = {}
+        for i, f in enumerate(self.formula):
+            chemsys = self.composition[i].chemical_system_sorted(separater=",")
+            Rows[f] = list(db.gen_rows(chemsys, *args, **kwargs))
+
+        return Rows
+
+    @staticmethod
+    def from_aserows(rowlst: list):
+        formulas = [Composition(r.formula).reduced_formula for r in rowlst]
+        species = Species(formulas=formulas)
+        species.set_rows(dict([(f, r) for f, r in zip(formulas, rowlst)]))
+        return species
 
 
 class Elements(Species):
