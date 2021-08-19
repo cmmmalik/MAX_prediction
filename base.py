@@ -368,10 +368,16 @@ class MAXAnalyzer(MAXSpecies):
                                                                     total_elements=self.total_elements,
                                                                     elemental_energies=elemental_energies)
 
-    def predict(self, elementfilterfunc=None, sizes: list or tuple or None = (2, 3), mpkey: str = None,
-                check_online: str = True, solvers_check: bool = True):
+    def predict(self,
+                elementfilterfunc=None,
+                sizes: list or tuple or None = (2, 3),
+                mpkey: str = None,
+                check_online: str = True,
+                solvers_check: bool = True,
+                remove_common_sp: bool or "mp" or "ase" = True):
+
         self.setup_predict(elementfilterfunc=elementfilterfunc, sizes=sizes, mpkey=mpkey, check_online=check_online,
-                           solvers_check=solvers_check)
+                           solvers_check=solvers_check, remove_common_sp=remove_common_sp)
         self._predict()
 
         stable, unstable = self._get_stable_unstable()
@@ -399,11 +405,13 @@ class MAXAnalyzer(MAXSpecies):
         return stable, unstable
 
     def setup_predict(self, elementfilterfunc=None, sizes: list or tuple or None = (2, 3), mpkey: str = None,
-                      check_online: str = True, solvers_check: bool = True, ):
+                      check_online: str = True, solvers_check: bool = True,
+                      remove_common_sp: bool or "ase" or "mp" = True):
         self.ASEDatabase_lookup(elementfilterfunc=elementfilterfunc,
                                 )  # local ase database search for MAX and Elements
         self.setup_sidephase(sizes=sizes, mpkey=mpkey,
-                             check_online=check_online)  # mongo database and online MP databae search
+                             check_online=check_online,
+                             remove_common_sp=remove_common_sp)  # mongo database and online MP databae search
         # for side phases
         reactions, reaction2 = self.balancer_inside(solvers_check=solvers_check)  # get the balanced reactions
         if reaction2:
@@ -416,7 +424,7 @@ class MAXAnalyzer(MAXSpecies):
             print(reactions)
 
     def setup_sidephase(self, sizes: list or tuple or None = (2, 3), mpkey: str = None, check_online: bool = True,
-                        ):
+                        remove_common_sp: bool or "mp" or "ase" = True):
         """
         Looks for the side phases by chemical systems based on provided sizes(list, default 2 and 3 ),
         in the local database first. If an entry is not in the local database, search is done in the online materials
@@ -450,8 +458,29 @@ class MAXAnalyzer(MAXSpecies):
 
         ## get extra max dataframe
         extra_sp_df = self.search_get_df_sp_chemsys_asedb(db=self.side_phase_asedb, exclude_overlap_rows=True)
+        # get commons before going forward
+        if remove_common_sp:
+            print("Removing common")
+            formulafunc = lambda x: Pymcomp(x).reduced_formula
+            sp_phases = self.side_phase_asedb.phase.apply(formulafunc)
+            extra_sp_ph = extra_sp_df.phase.apply(formulafunc)
+            if remove_common_sp == "mp" or remove_common_sp == True:
+                common = self.side_phase_asedb.loc[(sp_phases.isin(extra_sp_ph))]
+                if self.verbosity >= 1:
+                    print("Common side phase compositions begin dropped from MP(derived phases)")
+                self.side_phase_asedb.drop(common.index, inplace=True)
+            elif remove_common_sp == "ase":
+                common = extra_sp_df.loc[(extra_sp_ph.isin(sp_phases))]
+                if self.verbosity >= 1:
+                    print("Common side phase compositions begin dropped from ase(local database)")
+                    print(common)
+                extra_sp_df.drop(common.index, inplace=True)
+            else:
+                warnings.warn("Common side phases were not touched... I did nothing. Please specify either True, "
+                              "'ase', 'mp'")
+
         print("Adding extra side phases (obtained from ase database to pandas dataframe)")
-        self._side_phase_df = self.side_phases_df.append(extra_sp_df, ignore_index=True, verify_integrity=True)
+        self._side_phase_df = self.side_phases_df.append(extra_sp_df, ignore_index=True)
 
         if self.verbosity >= 1:
             print("Final side phases:")
@@ -809,7 +838,7 @@ class MAXAnalyzer(MAXSpecies):
         (if found)"""
 
         rows = self.search_sidephase_chemsys_asedb(db=db, exclude_overlap_rows=exclude_overlap_rows)
-        return self.sidephase_aserows_to_df(rows=list(zip(*rows.values()))[0])
+        return self.sidephase_aserows_to_df(rows=[r for rr in rows.values() for r in rr])
 
     def searchset_sidephase_df(self, sizes: list or tuple, mpkey: str = None, check_online: bool = True,
                                **entrykwargs):
