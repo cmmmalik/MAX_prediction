@@ -178,9 +178,10 @@ class CoreSpecies:
         return np.unique(self.formula)
 
     def to_dataframe(self, decimtol: int = 6):
-        """Only adds basic entries into the dataframe"""
+        """Only adds basic quantities into the dataframe"""
         df = DataFrame([(formula, self.composition[i].energy_per_formula, self.composition[i].chemical_system)
-                        for i, formula in self.formula], columns=["phase", "energy_per_formula", "chemsys"])
+                        for i, formula in enumerate(self.formula)], columns=["phase", "energy_per_formula", "chemsys"])
+        df["energy_per_formula"] = df["energy_per_formula"].round(decimals=decimtol)
         return df
 
 

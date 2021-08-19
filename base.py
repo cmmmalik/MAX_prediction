@@ -808,7 +808,7 @@ class MAXAnalyzer(MAXSpecies):
         (if found)"""
 
         rows = self.search_sidephase_chemsys_asedb(db=db, exclude_overlap_rows=exclude_overlap_rows)
-        return self.sidephase_aserows_to_df(rows=rows.values())
+        return self.sidephase_aserows_to_df(rows=list(zip(*rows))[0])
 
     def searchset_sidephase_df(self, sizes: list or tuple, mpkey: str = None, check_online: bool = True,
                                **entrykwargs):
