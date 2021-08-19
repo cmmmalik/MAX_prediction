@@ -450,7 +450,8 @@ class MAXAnalyzer(MAXSpecies):
 
         ## get extra max dataframe
         extra_sp_df = self.search_get_df_sp_chemsys_asedb(db=self.side_phase_asedb, exclude_overlap_rows=True)
-        self._side_phases_df = self.side_phases_df.append(extra_sp_df)
+        print("Adding extra side phases (obtained from ase database to pandas dataframe)")
+        self._side_phases_df = self.side_phases_df.append(extra_sp_df, ignore_index=True, verify_integrity=True)
 
         if self.verbosity >= 1:
             print("Final side phases:")
@@ -795,7 +796,7 @@ class MAXAnalyzer(MAXSpecies):
     def sidephase_aserows_to_df(self, rows: list or tuple):
         sp_species = self.from_aserows(rows)
         df = sp_species.to_dataframe(decimtol=self.decimtol)
-        df.rename(columns={"energy_per_formula": "total_energy_per_formula"})
+        df.rename(columns={"energy_per_formula": "total_energy_per_formula"}, inplace=True)
         return df
 
     def search_get_df_sp_chemsys_asedb(self, db: str or dBcore = None, exclude_overlap_rows: bool = True):
