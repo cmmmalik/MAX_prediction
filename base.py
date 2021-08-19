@@ -449,7 +449,7 @@ class MAXAnalyzer(MAXSpecies):
         self.calculate_total_energy_frmformation_sp(add_elements_df=True)
 
         ## get extra max dataframe
-        extra_sp_df = self.search_set_sp_chemsys_asedb(db=self.side_phase_asedb, exclude_overlap_rows=True)
+        extra_sp_df = self.search_get_df_sp_chemsys_asedb(db=self.side_phase_asedb, exclude_overlap_rows=True)
         self._side_phases_df = self.side_phases_df.append(extra_sp_df)
 
         if self.verbosity >= 1:
@@ -788,8 +788,8 @@ class MAXAnalyzer(MAXSpecies):
 
         if self.rows and exclude_overlap_rows == True:
             for i, f in enumerate(self.formula):
-                id = self.composition[i].row.row.id
-                side_Rows[f] = [r for r in side_Rows[f] if r.id != id]
+                uqid = self.composition[i].row.row.unique_id
+                side_Rows[f] = [r for r in side_Rows[f] if r.unique_id != uqid]
         return side_Rows
 
     def sidephase_aserows_to_df(self, rows: list or tuple):
@@ -798,9 +798,17 @@ class MAXAnalyzer(MAXSpecies):
         df.rename(columns={"energy_per_formula": "total_energy_per_formula"})
         return df
 
-    def search_set_sp_chemsys_asedb(self, db: str or dBcore = None, exclude_overlap_rows: bool = True):
+    def search_get_df_sp_chemsys_asedb(self, db: str or dBcore = None, exclude_overlap_rows: bool = True):
+        """Searches and then returns a dataframe the side phases given by the chemical system of each MAX phase.
+        It looks for ase rows in the ase database ('db'). exclude_overlap_rows remove rows that are matching with
+        the MAX rows already present as rows attribute. The match is considered only if row.unique_id matches with
+        the corresponding MAX composition row.
+        :param db: str or dBcore instance, default None. The database of ase to perform search in.
+        :param exclude_overlap_rows: bool type, default True, matches and removes rows that overlap with MAX rows
+        (if found)"""
+
         rows = self.search_sidephase_chemsys_asedb(db=db, exclude_overlap_rows=exclude_overlap_rows)
-        return self.sidephase_aserows_to_df(rows=rows)
+        return self.sidephase_aserows_to_df(rows=rows.values())
 
     def searchset_sidephase_df(self, sizes: list or tuple, mpkey: str = None, check_online: bool = True,
                                **entrykwargs):
