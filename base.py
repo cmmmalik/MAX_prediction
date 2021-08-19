@@ -462,13 +462,13 @@ class MAXAnalyzer(MAXSpecies):
         if remove_common_sp:
             print("Removing common")
             formulafunc = lambda x: Pymcomp(x).reduced_formula
-            sp_phases = self.side_phase_asedb.phase.apply(formulafunc)
+            sp_phases = self.side_phases_df.phase.apply(formulafunc)
             extra_sp_ph = extra_sp_df.phase.apply(formulafunc)
             if remove_common_sp == "mp" or remove_common_sp == True:
-                common = self.side_phase_asedb.loc[(sp_phases.isin(extra_sp_ph))]
+                common = self.side_phases_df.loc[(sp_phases.isin(extra_sp_ph))]
                 if self.verbosity >= 1:
                     print("Common side phase compositions begin dropped from MP(derived phases)")
-                self.side_phase_asedb.drop(common.index, inplace=True)
+                self.side_phases_df.drop(common.index, inplace=True)
             elif remove_common_sp == "ase":
                 common = extra_sp_df.loc[(extra_sp_ph.isin(sp_phases))]
                 if self.verbosity >= 1:
