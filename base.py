@@ -451,7 +451,7 @@ class MAXAnalyzer(MAXSpecies):
         ## get extra max dataframe
         extra_sp_df = self.search_get_df_sp_chemsys_asedb(db=self.side_phase_asedb, exclude_overlap_rows=True)
         print("Adding extra side phases (obtained from ase database to pandas dataframe)")
-        self._side_phases_df = self.side_phases_df.append(extra_sp_df, ignore_index=True, verify_integrity=True)
+        self._side_phase_df = self.side_phases_df.append(extra_sp_df, ignore_index=True, verify_integrity=True)
 
         if self.verbosity >= 1:
             print("Final side phases:")
