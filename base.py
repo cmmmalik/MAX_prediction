@@ -467,12 +467,13 @@ class MAXAnalyzer(MAXSpecies):
             if remove_common_sp == "mp" or remove_common_sp == True:
                 common = self.side_phases_df.loc[(sp_phases.isin(extra_sp_ph))]
                 if self.verbosity >= 1:
-                    print("Common side phase compositions begin dropped from MP(derived phases)")
+                    print("Common side phase compositions are being dropped from MP(derived phases):")
+                    print(common)
                 self.side_phases_df.drop(common.index, inplace=True)
             elif remove_common_sp == "ase":
                 common = extra_sp_df.loc[(extra_sp_ph.isin(sp_phases))]
                 if self.verbosity >= 1:
-                    print("Common side phase compositions begin dropped from ase(local database)")
+                    print("Common side phase compositions begin dropped from ase(local database):")
                     print(common)
                 extra_sp_df.drop(common.index, inplace=True)
             else:
