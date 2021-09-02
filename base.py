@@ -512,8 +512,7 @@ class MAXAnalyzer(MAXSpecies):
                               "'ase', 'mp'")
 
         formulafunc = lambda x: Pymcomp(x).reduced_formula
-        sp_phases = self.side_phases_df.phase.apply(formulafunc)
-        return sp_phases
+        return extra_sp_df
 
     def add_calculate_formation_energy_sidephases(self):
 
