@@ -842,7 +842,7 @@ class MAXAnalyzer(MAXSpecies):
 
     def search_sidephase_chemsys_asedb(self, db: str or dBcore = None, exclude_overlap_rows: bool = True):
         """ Searches the phases acting as side phases in the ase database, based on the chemical system of MAX . In other words,
-        searches for  any  compositions containing any of the elements present in the chemical system
+        searches for  any  compositions containing all of the elements present in the chemical system
         defined by the given MAX phase(including other MAX phases) in the  local ase database."""
 
         if not db:
@@ -854,6 +854,23 @@ class MAXAnalyzer(MAXSpecies):
                 uqid = self.composition[i].row.row.unique_id
                 side_Rows[f] = [r for r in side_Rows[f] if r.unique_id != uqid]
         return side_Rows
+
+    def search_sidephase_permute_chemsys_asedb(self, db:str or dBcore = None, exclude_overlap_rows:bool = True, *args,
+                                               **kwargs):
+        if not db:
+            db = self.side_phase_asedb
+        side_Rows = self.search_permute_chemical_sytems_asedb(db=db, *args, **kwargs)
+
+
+    def remove_overlap_asedb(self, Rows):
+        if self.rows:
+            for i,f in enumerate(self.formula):
+                uqid = self.composition[i].row.row.unique_id
+                Rows[f] = [r for r in Rows[f] if r.unique_id != uqid]
+        else:
+            warnings.warn("MAX Rows are absent, I cannot find and remove the overlapping rows from the inputs rows")
+        return Rows
+
 
     def sidephase_aserows_to_df(self, rows: list or tuple):
         sp_species = self.from_aserows(rows)
