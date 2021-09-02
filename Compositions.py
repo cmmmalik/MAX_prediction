@@ -310,9 +310,12 @@ class Species(CoreSpecies):
     def search_chemical_sytem_asedb(self, db: dBcore or str, *args, **kwargs):
         db = SearcherdB(db=db, verbosity=self.verbosity)
         Rows = {}
+        chemsys_generator = Genchemicalsystems(separator=",")
         for i, f in enumerate(self.formula):
-            chemsys = self.composition[i].chemical_system_sorted(separater=",")
-            Rows[f] = list(db.gen_rows(chemsys, *args, **kwargs))
+            els = sorted(self.composition[i].chemical_system.split("-"))
+            chemsys_generator.elements = els
+            Rows[f] = [row for chemsys in chemsys_generator.unique_combinations_sizes(sizes=list(range(2, len(els))))
+                       for row in db.gen_rows(chemsys, *args, **kwargs)]
 
         return Rows
 
@@ -370,19 +373,25 @@ class Elements(Species):
 
 class Genchemicalsystems:
 
-    def __init__(self, elements: list or tuple = None):
+    def __init__(self, elements: list or tuple = None, separator:str="-"):
         self.elements = elements
+        self.separator = separator
 
-    def combinations(self, size: int = 2):
+    def combinations(self, size: int = 2, ):
         maxcomb = itcombinations(self.elements, size)
         for comb in maxcomb:
             ss = ["{}".format(c) for c in comb]
-            ss = "-".join(ss)
+            ss = "{}".format(self.separator).join(ss)
             yield ss
 
-    def combinations_sizes(self, sizes: list or tuple):
+    def combinations_sizes(self, sizes: list or tuple,):
         for size in sizes:
             yield self.combinations(size=size)
 
-    def unique_combinations_sizes(self, sizes: list or tuple):
+    def unique_combinations_sizes(self, sizes: list or tuple,):
         return sorted({ss for sistem in self.combinations_sizes(sizes) for ss in sistem})
+
+    def gen_unique_possible_combinations(self):
+        sizes = [i for i in range(2, len(self.elements))]
+        return self.unique_combinations_sizes(sizes=sizes)
+
