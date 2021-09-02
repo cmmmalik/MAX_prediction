@@ -307,7 +307,17 @@ class Species(CoreSpecies):
 
         return Entries
 
-    def search_chemical_sytem_asedb(self, db: dBcore or str, *args, **kwargs):
+    def search_chemical_system_asedb(self, db:dBcore or str, *args, **kwargs):
+        db  =SearcherdB(db=db, verbosity=self.verbosity)
+        Rows = {}
+        for i,f in enumerate(self.formula):
+            chemsys = self.composition[i].chemical_system_sorted(separater=",")
+            Rows[f] = list(db.gen_rows(chemsys, *args, **kwargs))
+
+        return Rows
+
+
+    def search_permute_chemical_sytems_asedb(self, db: dBcore or str, *args, **kwargs):
         db = SearcherdB(db=db, verbosity=self.verbosity)
         Rows = {}
         chemsys_generator = Genchemicalsystems(separator=",")
