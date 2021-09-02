@@ -847,7 +847,7 @@ class MAXAnalyzer(MAXSpecies):
 
         if not db:
             db = self.side_phase_asedb
-        side_Rows = self.search_chemical_sytem_asedb(db=db)
+        side_Rows = self.search_chemical_system_asedb(db=db)
 
         if self.rows and exclude_overlap_rows == True:
             for i, f in enumerate(self.formula):
