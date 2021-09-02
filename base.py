@@ -515,10 +515,15 @@ class MAXAnalyzer(MAXSpecies):
 
     def ASEDatabase_lookup(self, elementfilterfunc=None, correction: bool = False):
         # search in the databses
-        assert self.maxdb and self.elementdb
-        self.search_set_rows(asedb=self.maxdb)
+
+        if not self.rows:
+            assert self.maxdb
+            self.search_set_rows(asedb=self.maxdb)
+        else:
+            warnings.warn("MAX phases are already obtained from the database")
 
         if not self.Elements.rows:
+            assert self.elementdb
             elrows = self.search_elements(elementfilterfunc=elementfilterfunc)
             self.Elements.set_rows(rowsdict=elrows)
         else:
