@@ -457,20 +457,51 @@ class MAXAnalyzer(MAXSpecies):
         self.calculate_total_energy_frmformation_sp(add_elements_df=True)
 
         ## get extra max dataframe
-        extra_sp_df = self.search_get_df_sp_chemsys_asedb(db=self.side_phase_asedb, exclude_overlap_rows=True)
+        # extra_sp_df = self.search_get_df_sp_chemsys_asedb(db=self.side_phase_asedb, exclude_overlap_rows=True)
         # get commons before going forward
-        if remove_common_sp:
+        # if remove_common_sp:
+        #     print("Removing common")
+        #     formulafunc = lambda x: Pymcomp(x).reduced_formula
+        #     sp_phases = self.side_phases_df.phase.apply(formulafunc)
+        #     extra_sp_ph = extra_sp_df.phase.apply(formulafunc)
+        #     if remove_common_sp == "mp" or remove_common_sp == True:
+        #         common = self.side_phases_df.loc[(sp_phases.isin(extra_sp_ph))]
+        #         if self.verbosity >= 1:
+        #             print("Common side phase compositions are being dropped from MP(derived phases):")
+        #             print(common)
+        #         self.side_phases_df.drop(common.index, inplace=True)
+        #     elif remove_common_sp == "ase":
+        #         common = extra_sp_df.loc[(extra_sp_ph.isin(sp_phases))]
+        #         if self.verbosity >= 1:
+        #             print("Common side phase compositions begin dropped from ase(local database):")
+        #             print(common)
+        #         extra_sp_df.drop(common.index, inplace=True)
+        #     else:
+        #         warnings.warn("Common side phases were not touched... I did nothing. Please specify either True, "
+        #                       "'ase', 'mp'")
+        extra_sp_df = self.find_side_phases_from_asedb(db=self.side_phase_asedb, exclude_overlap_rows=True)
+        print("Adding extra side phases (obtained from ase database to pandas dataframe)")
+        self._side_phase_df = self.side_phases_df.append(extra_sp_df, ignore_index=True)
+
+        if self.verbosity >= 1:
+            print("Final side phases:")
+            print(self.side_phases_df)
+
+    def find_side_phases_from_asedb(self, db: str or dBcore, remove_common:bool or "mp" or "ase" = True,
+                                    exclude_overlap_rows:bool=True):
+        extra_sp_df = self.search_get_df_sp_chemsys_asedb(db=db, exclude_overlap_rows=exclude_overlap_rows)
+        if remove_common:
             print("Removing common")
             formulafunc = lambda x: Pymcomp(x).reduced_formula
             sp_phases = self.side_phases_df.phase.apply(formulafunc)
             extra_sp_ph = extra_sp_df.phase.apply(formulafunc)
-            if remove_common_sp == "mp" or remove_common_sp == True:
+            if remove_common == "mp" or remove_common == True:
                 common = self.side_phases_df.loc[(sp_phases.isin(extra_sp_ph))]
                 if self.verbosity >= 1:
                     print("Common side phase compositions are being dropped from MP(derived phases):")
                     print(common)
                 self.side_phases_df.drop(common.index, inplace=True)
-            elif remove_common_sp == "ase":
+            elif remove_common == "ase":
                 common = extra_sp_df.loc[(extra_sp_ph.isin(sp_phases))]
                 if self.verbosity >= 1:
                     print("Common side phase compositions begin dropped from ase(local database):")
@@ -480,12 +511,9 @@ class MAXAnalyzer(MAXSpecies):
                 warnings.warn("Common side phases were not touched... I did nothing. Please specify either True, "
                               "'ase', 'mp'")
 
-        print("Adding extra side phases (obtained from ase database to pandas dataframe)")
-        self._side_phase_df = self.side_phases_df.append(extra_sp_df, ignore_index=True)
-
-        if self.verbosity >= 1:
-            print("Final side phases:")
-            print(self.side_phases_df)
+        formulafunc = lambda x: Pymcomp(x).reduced_formula
+        sp_phases = self.side_phases_df.phase.apply(formulafunc)
+        return sp_phases
 
     def add_calculate_formation_energy_sidephases(self):
 
