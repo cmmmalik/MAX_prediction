@@ -274,7 +274,7 @@ class Entry:
 
     @property
     def composition(self):
-        return self.composition
+        return self._entry.composition
 
     @property
     def data(self):
