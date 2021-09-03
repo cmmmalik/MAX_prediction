@@ -385,6 +385,14 @@ class MAXAnalyzer(MAXSpecies):
         self.calcadd_enthalpyreactions()
         self.add_enthalpyperatom()
 
+    def do_prediction(self):
+        """Convienent method, calls _predict method, which actually does the calculation of enthalpies and
+        post-calculation insertion of energies into the reactions pandas dataframe and returns stable and unstable array
+        of phases"""
+
+        self._predict()
+        return self._get_stable_unstable()
+
     def _get_stable_unstable(self):
         # a hack, dividing functions into subfunctions,
         bol = self.reactions_df.enthalpy > 0
