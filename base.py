@@ -857,10 +857,24 @@ class MAXAnalyzer(MAXSpecies):
 
     def search_sidephase_permute_chemsys_asedb(self, db:str or dBcore = None, exclude_overlap_rows:bool = True, *args,
                                                **kwargs):
+        """
+        Searches for all the phases in the ase database, acting as side phase, on the basis of chemical system of MAX.
+        It matches any chemical system that is subset of chemical system of the MAX phase. In other words, any composition,
+        binary or ternary, is included if any elemental-combination is found in the MAX phase. The search is similar to
+        sqlite search in ase database.
+
+        :param db: str or dBcore, ase database to be searched
+        :param exclude_overlap_rows: bool type, default True, remove the rows matching any MAX rows, based on unique_id
+        :param args: extra search arguments, for selection/filtering, passed to the ase-sqlite searcher.
+        :param kwargs: key-words arguments, for further filtering, passed to the ase-sqlite searcher.
+        :return:
+        """
         if not db:
             db = self.side_phase_asedb
         side_Rows = self.search_permute_chemical_sytems_asedb(db=db, *args, **kwargs)
 
+    def set_sidephase_df(self, df):
+        self._side_phase_df = df
 
     def remove_overlap_asedb(self, Rows):
         if self.rows:
