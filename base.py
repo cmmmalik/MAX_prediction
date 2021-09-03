@@ -312,8 +312,6 @@ class MAXAnalyzer(MAXSpecies):
         df["chemsys"] = self.chemicalsystems
         self._max_df = df
 
-    def set_side_phases_df(self, value):
-        self._side_phase_df = value
 
     @staticmethod
     def Entries_to_df(entries: list or tuple):
@@ -425,7 +423,7 @@ class MAXAnalyzer(MAXSpecies):
 
     def balance(self, solvers_check: bool = True):
 
-        reactions, reactions2 = self.balancer_inside(solvers_check=solvers_check)
+        reactions, reaction2 = self.balancer_inside(solvers_check=solvers_check)
         if reaction2:
             raise NotImplementedError("Unable to handle if both balancing solvers give different result")
         self.reactions_df = reactions
