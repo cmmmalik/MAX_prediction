@@ -423,6 +423,17 @@ class MAXAnalyzer(MAXSpecies):
             print("Reactions")
             print(reactions)
 
+    def balance(self, solvers_check: bool = True):
+
+        reactions, reactions2 = self.balancer_inside(solvers_check=solvers_check)
+        if reaction2:
+            raise NotImplementedError("Unable to handle if both balancing solvers give different result")
+        self.reactions_df = reactions
+        self.insert_energy_column()
+        if self.verbosity >= 1:
+            print("Reactions")
+            print(reactions)
+
     def setup_sidephase(self, sizes: list or tuple or None = (2, 3), mpkey: str = None, check_online: bool = True,
                         remove_common_sp: bool or "mp" or "ase" = True):
         """
