@@ -361,7 +361,8 @@ class Species(CoreSpecies):
                          entry.entry.correction_per_atom,
                          round(entry.entry.uncorrected_energy_per_atom * entry.composition.reduced_composition.num_atoms, decimtol ),
                          round(entry.entry.uncorrected_energy_per_atom, decimtol),
-                         entry.data.get("spacegroup", None),
+                         entry.data.get("spacegroup", None).get("symbol", None) if isinstance(entry.data.get("spacegroup"), dict)
+                         else None,
                          entry.data.get("formation_energy_per_atom", None))
                         for i, entry in enumerate(self.entries)],
                        columns = ["phase", "mp-id", "chemsys", "e_above_hull", "correction_per_atom",
