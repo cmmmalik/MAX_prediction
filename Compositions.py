@@ -93,7 +93,9 @@ class CoreSpecie:
         if isinstance(value, (ComputedEntry, ComputedStructureEntry)):
             self._entry = Entry(value)
         else:
-            raise ValueError("Expected an instance of {}, instead got {}".format(Entry, type(value)))
+            raise ValueError("Expected an instance of {} or {}, instead got {}".format(ComputedEntry,
+                                                                                       ComputedStructureEntry,
+                                                                                       type(value)))
 
     @property
     def energy_per_formula(self):
@@ -177,6 +179,22 @@ class CoreSpecies:
     def unique_formula(self):
         return np.unique(self.formula)
 
+    @property
+    def energies_per_atom(self):
+        return np.asarray([comp.energy_per_atom for comp in self.composition])
+
+    @property
+    def energies_per_formula(self):
+        return np.asarray([comp.energy_per_formula for comp in self.composition])
+
+    @property
+    def energies_per_atom_in_entry(self):
+        return np.asarray([comp.energy_per_atom_in_entry for comp in self.composition])
+
+    @property
+    def energies_per_formula_in_entry(self):
+        return np.asarray([comp.energy_per_formula_in_entry for comp in self.composition])
+
     def to_dataframe(self, decimtol: int = 6):
         """Only adds basic quantities into the dataframe"""
         df = DataFrame([(formula, self.composition[i].energy_per_formula,
@@ -203,7 +221,6 @@ class Species(CoreSpecies):
         self._database = None
         self._entries = None
         self._rows = None
-        self._entries = None
 
         super(Species, self).__init__(formulas=formulas)
         if asedb:
@@ -280,10 +297,12 @@ class Species(CoreSpecies):
         self._rows = rrows  # redudant .. remove this in future
 
     def set_entries(self, entrydict: dict):
-
+        entries = []
         for i, f in enumerate(self.formula):
             entry = entrydict[f]
             self.composition[i].entry = entry
+            entries.append(self.composition[i].entry)
+        self._entries = entries
 
     def search_in_mpdb(self, sort_by_e_above_hull: bool = True):
         assert self.database
@@ -335,6 +354,22 @@ class Species(CoreSpecies):
         species = Species(formulas=formulas)
         species.set_rows(dict([(f, r) for f, r in zip(formulas, rowlst)]))
         return species
+
+    def to_dataframe_entries(self, decimtol: int = 6):
+        df = DataFrame([(self.formula[i], entry.entry.entry_id, self.composition[i].chemical_system_sorted("-"),
+                         entry.data.get("e_above_hull", None),
+                         entry.entry.correction_per_atom,
+                         round(entry.entry.uncorrected_energy_per_atom * entry.composition.reduced_composition.num_atoms, decimtol ),
+                         round(entry.entry.uncorrected_energy_per_atom, decimtol),
+                         entry.data.get("spacegroup", None),
+                         entry.data.get("formation_energy_per_atom", None))
+                        for i, entry in enumerate(self.entries)],
+                       columns = ["phase", "mp-id", "chemsys", "e_above_hull", "correction_per_atom",
+                                  "uncorr_total_energy_per_formula", "uncorr_total_energy_per_atom",
+                                   "spacegroup", "corr_formation_energy_per_atom"])
+
+        return df
+
 
 
 class Elements(Species):
