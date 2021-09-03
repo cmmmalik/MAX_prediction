@@ -557,6 +557,12 @@ class MAXAnalyzer(MAXSpecies):
         if add_elements_df:
             self.append_elements_side_df(elemental_energies=elemental_energies)
 
+    def get_elemental_energies(self):
+        elemental_energies = {specie.formula: round(specie.energy_per_atom, self.decimtol) for specie in
+                              self.Elements.composition}
+        return elemental_energies
+
+
     def ASEDatabase_lookup(self, elementfilterfunc=None, correction: bool = False):
         # search in the databses
 
