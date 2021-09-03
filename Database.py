@@ -272,6 +272,14 @@ class Entry:
     def entry(self):
         return self._entry
 
+    @property
+    def composition(self):
+        return self.composition
+
+    @property
+    def data(self):
+        return self._entry.data
+
     @entry.setter
     def entry(self, entry: ComputedEntry or ComputedStructureEntry):
         if not isinstance(entry, (ComputedEntry, ComputedStructureEntry)):
