@@ -496,9 +496,10 @@ class MAXAnalyzer(MAXSpecies):
         #     else:
         #         warnings.warn("Common side phases were not touched... I did nothing. Please specify either True, "
         #                       "'ase', 'mp'")
-        extra_sp_df = self.find_side_phases_from_asedb(db=self.side_phase_asedb, exclude_overlap_rows=True)
-        print("Adding extra side phases (obtained from ase database to pandas dataframe)")
-        self._side_phase_df = self.side_phases_df.append(extra_sp_df, ignore_index=True)
+        if self.side_phase_asedb:
+            extra_sp_df = self.find_side_phases_from_asedb(db=self.side_phase_asedb, exclude_overlap_rows=True)
+            print("Adding extra side phases (obtained from ase database to pandas dataframe)")
+            self._side_phase_df = self.side_phases_df.append(extra_sp_df, ignore_index=True)
 
         if self.verbosity >= 1:
             print("Final side phases:")
