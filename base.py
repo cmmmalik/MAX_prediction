@@ -196,6 +196,8 @@ class MAXAnalyzer(MAXSpecies):
         self._side_phase_df = None
         self._side_phase_formation_colname = "uncorr_formation_energy_per_formula"
         self._side_phase_calculate_formation_energy = False
+        self._sp_remove_MAX = True
+        self._sp_append_with_MAX = True
         self._max_df = None
         self._entries = None
         self._reactions_df = None
@@ -284,6 +286,26 @@ class MAXAnalyzer(MAXSpecies):
     def _setdb(self, db: dBcore or str):
         if not isinstance(db, (str, dBcore)):
             raise ValueError("Invalid '{}', expected '{}' or '{}'".format(db, str, dBcore.__name__))
+
+    @property
+    def side_phase_remove_MAX(self):
+        return self._sp_remove_MAX
+
+    @side_phase_remove_MAX.setter
+    def side_phase_remove_MAX(self, value: bool):
+        if not isinstance(value, bool):
+            raise ValueError("expected a {} value, instead got {}".format(bool, type(value)))
+        self._sp_remove_MAX = value
+
+    @property
+    def side_phase_append_with_MAX(self):
+        return self._sp_append_with_MAX
+
+    @side_phase_append_with_MAX.setter
+    def side_phase_append_with_MAX(self, value: bool):
+        if not isinstance(value, bool):
+            raise ValueError("expected a {} value, instead got {}".format(bool, type(value)))
+        self._sp_append_with_MAX = value
 
     @property
     def Elements(self):
@@ -738,8 +760,8 @@ class MAXAnalyzer(MAXSpecies):
             pr = self[index] or self[formula]
         els = pr.elementsmap
         elements = pr.elements
-        max_side_phases = max_df.phase.loc[
-            (max_df.phase != pr.formula) & (chemsys_series == "-".join(sorted(elements)))]
+
+
         # s_max_ph = side_ph_series.loc[side_chemsys_series == "-".join(sorted(elements))]
 
         s_ph = side_ph_series.loc[(side_ph_series.str.contains(els["M"]))
@@ -747,7 +769,11 @@ class MAXAnalyzer(MAXSpecies):
                                   | (side_chemsys_series == els["X"])
                                   | (side_chemsys_series == "-".join(sorted([els["A"], els["X"]])))]
 
-        s_ph = np.append(s_ph, max_side_phases)
+        if self.side_phase_append_with_MAX:
+            max_side_phases = max_df.phase.loc[
+                (max_df.phase != pr.formula) & (chemsys_series == "-".join(sorted(elements)))]
+            s_ph = np.append(s_ph, max_side_phases)
+
         s_ph = np.unique(s_ph)
         return s_ph
 
@@ -850,18 +876,21 @@ class MAXAnalyzer(MAXSpecies):
         formulafunc = lambda x: Pymcomp(x).reduced_composition.iupac_formula.replace(" ", "")
         phases = side_phase_df.phase.apply(formulafunc)
         sg = side_phase_df.spacegroup
-        if self.max_df is not None:
-            max_ph = self.max_df.phase.apply(formulafunc)
-        else:
-            max_ph = np.asarray([Pycomp(i).iupac_formula for i in self.formula])
-        common = side_phase_df.loc[(phases.isin(max_ph)) & (sg == "P6_3/mmc")]  # drop overlapping compositions with MAX
+        if self.side_phase_remove_MAX:
+            if self.max_df is not None:
+                max_ph = self.max_df.phase.apply(formulafunc)
+            else:
+                max_ph = np.asarray([Pycomp(i).iupac_formula for i in self.formula])
 
-        if self.verbosity >= 1:
-            print("Common MAX Compositions:")
-            print(common)
+            common = side_phase_df.loc[(phases.isin(max_ph)) & (sg == "P6_3/mmc")]  # drop overlapping compositions with MAX
 
-        side_phase_df.drop(common.index, inplace=True)
-        side_phase_df.reset_index(drop=True, inplace=True)
+            if self.verbosity >= 1:
+                print("Common MAX Compositions:")
+                print(common)
+
+            side_phase_df.drop(common.index, inplace=True)
+            side_phase_df.reset_index(drop=True, inplace=True)
+
         self._side_phase_df = side_phase_df
 
     def search_sidephase_chemsys_asedb(self, db: str or dBcore = None, exclude_overlap_rows: bool = True):
