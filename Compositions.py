@@ -197,9 +197,10 @@ class CoreSpecies:
 
     def to_dataframe(self, decimtol: int = 6):
         """Only adds basic quantities into the dataframe"""
-        df = DataFrame([(formula, self.composition[i].energy_per_formula,
+        df = DataFrame([(formula, self.composition[i].energy_per_formula, self.composition[i].energy_per_atom,
                          self.composition[i].chemical_system_sorted(separater="-"))
-                        for i, formula in enumerate(self.formula)], columns=["phase", "energy_per_formula", "chemsys"])
+                        for i, formula in enumerate(self.formula)], columns=["phase", "energy_per_formula", "energy_per_atom",
+                                                                             "chemsys"])
         df["energy_per_formula"] = df["energy_per_formula"].round(decimals=decimtol)
         return df
 
