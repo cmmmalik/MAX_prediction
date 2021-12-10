@@ -125,8 +125,12 @@ class MAXSpecies(Species):
         rowsdict = super(MAXSpecies, self).search_in_asedb(asedb=asedb)
         return rowsdict
 
-    def search_set_rows(self, asedb: str or dBcore = None):
+    def search_set_rows(self, asedb: str or dBcore = None, filterfunc=None):
         rowsdict = self.search_in_asedb(asedb=asedb)
+
+        if filterfunc:
+            rowsdict = {k:[k for k in filter(filterfunc, rows)] for k,rows in rowsdict.items()}
+
         if rowsdict:
             self.set_rows(rowsdict=rowsdict)
 
@@ -204,6 +208,7 @@ class MAXAnalyzer(MAXSpecies):
         self._maxdb = None
         self._elementdb = None
         self._side_phase_asedb = None
+        self._sp_asedb_filterfunc=None
         self.verbosity = verbosity
         self.decimtol = decimtol
 
@@ -244,6 +249,8 @@ class MAXAnalyzer(MAXSpecies):
 
     @side_phase_calculate_formation_energy.setter
     def side_phase_calculate_formation_energy(self, value: bool):
+        print("Whether to re-calculate the side formation energy of the side phases"
+              " (for mp database used usually to avoid any correction)")
         if not isinstance(value, bool):
             raise ValueError("Expected only boolean type values, instead received {}".format(type(value)))
         self._side_phase_calculate_formation_energy = value
@@ -270,8 +277,11 @@ class MAXAnalyzer(MAXSpecies):
         return self._side_phase_asedb
 
     @side_phase_asedb.setter
-    def side_phase_asedb(self, db: dBcore or str):
-        self._setdb(db)
+    def side_phase_asedb(self, db: [dBcore or str]):
+        print("This database must contain only MAX phases, that may (not) participate in competition.")
+        for ddb in db:
+            self._setdb(ddb)
+
         self._side_phase_asedb = db
 
     @property
@@ -306,6 +316,10 @@ class MAXAnalyzer(MAXSpecies):
         if not isinstance(value, bool):
             raise ValueError("expected a {} value, instead got {}".format(bool, type(value)))
         self._sp_append_with_MAX = value
+
+    @property
+    def sp_asedb_filterfunc(self):
+        return self._sp_asedb_filterfunc
 
     @property
     def Elements(self):
@@ -394,10 +408,35 @@ class MAXAnalyzer(MAXSpecies):
                 mpkey: str = None,
                 check_online: str = True,
                 solvers_check: bool = True,
-                remove_common_sp: bool or "mp" or "ase" = True):
+                remove_common_sp: bool or "mp" or "ase" = True,
+                maxrowsfilterfunc=None,
+                searchmethod_dbnew_sp:bool=True,
+                asedb_final_filter_function_sp=None,
+                ):
+        """
+        Method that predicts the stabilities of MAX phases.
+        'sp' contanning arguments are passed to side phase related methods.
+        
+        :param elementfilterfunc:
+        :param sizes:
+        :param mpkey:
+        :param check_online:
+        :param solvers_check:
+        :param remove_common_sp:
+        :param maxrowsfilterfunc:
+        :param searchmethod_dbnew_sp:
+        :param asedb_final_filter_function_sp:
+        :return:
+        """
 
-        self.setup_predict(elementfilterfunc=elementfilterfunc, sizes=sizes, mpkey=mpkey, check_online=check_online,
-                           solvers_check=solvers_check, remove_common_sp=remove_common_sp)
+        self.setup_predict(elementfilterfunc=elementfilterfunc,
+                           sizes=sizes, mpkey=mpkey,
+                           check_online=check_online,
+                           solvers_check=solvers_check,
+                           remove_common_sp=remove_common_sp,
+                           maxrowsfilterfunc=maxrowsfilterfunc,
+                           search_dbnew_sp=searchmethod_dbnew_sp,
+                           asedb_filter_func_sp=asedb_final_filter_function_sp)
         self._predict()
 
         stable, unstable = self._get_stable_unstable()
@@ -432,14 +471,24 @@ class MAXAnalyzer(MAXSpecies):
         assert len(stable) + len(unstable) == len(self.formula)
         return stable, unstable
 
-    def setup_predict(self, elementfilterfunc=None, sizes: list or tuple or None = (2, 3), mpkey: str = None,
-                      check_online: str = True, solvers_check: bool = True,
-                      remove_common_sp: bool or "ase" or "mp" = True):
-        self.ASEDatabase_lookup(elementfilterfunc=elementfilterfunc,
+    def setup_predict(self, elementfilterfunc=None,
+                      sizes: list or tuple or None = (2, 3),
+                      mpkey: str = None,
+                      check_online: str = True,
+                      solvers_check: bool = True,
+                      remove_common_sp: bool or "ase" or "mp" = True,
+                      maxrowsfilterfunc=None,
+                      search_dbnew_sp:bool=True,
+                      asedb_filter_func_sp=None):
+
+        self.ASEDatabase_lookup(elementfilterfunc=elementfilterfunc, maxrowsfilterfunc=maxrowsfilterfunc
                                 )  # local ase database search for MAX and Elements
+
         self.setup_sidephase(sizes=sizes, mpkey=mpkey,
                              check_online=check_online,
-                             remove_common_sp=remove_common_sp)  # mongo database and online MP databae search
+                             remove_common_sp=remove_common_sp,
+                             search_dbnew=search_dbnew_sp,
+                             asedb_filter_func=asedb_filter_func_sp)  # mongo database and online MP databae search
         # for side phases
         reactions, reaction2 = self.balancer_inside(solvers_check=solvers_check)  # get the balanced reactions
         if reaction2:
@@ -462,8 +511,39 @@ class MAXAnalyzer(MAXSpecies):
             print("Reactions")
             print(reactions)
 
-    def setup_sidephase(self, sizes: list or tuple or None = (2, 3), mpkey: str = None, check_online: bool = True,
-                        remove_common_sp: bool or "mp" or "ase" = True):
+    def getdf_sidephase_elements_MPDatabase(self, elementfilter):
+
+        self.set_search_elements_mp(sort_by_e_above_hull=True, elementfilter=elementfilter)
+        el_df = self.Elements.to_dataframe_entries()
+        el_df["uncorr_total_energy_pf_mp"] = el_df["uncorr_total_energy_per_formula"]
+        el_df["uncorr_total_energy_pa_mp"] = el_df["uncorr_total_energy_per_atom"]
+        el_df.drop(labels=["uncorr_total_energy_per_formula", "uncorr_total_energy_per_atom"], axis=1)
+        el_df["total_energy_per_formula"] = el_df["uncorr_total_energy_pa_mp"]
+        assert el_df["uncorr_total_energy_pa_mp"].equals(el_df["uncorr_total_energy_pf_mp"])
+        return el_df
+
+    def setup_sidephase_MPDatabase(self, sizes:list or tuple or None=[2,3],
+                                   check_online: bool = True,
+                                   mpkey: str = None,
+                                   elementfilter=None):
+
+        self.MPDatabase_lookup(sizes=sizes, mpkey=mpkey, check_online=check_online)
+        #filter out e_above hull greater than zero
+        Pandasutils.filter_e_above_hull(self.side_phases_df)
+        self.side_phases_df.reset_index(drop=True, inplace=True)
+        self.side_phases_df["total_energy_per_formula"] = self.side_phases_df["uncorr_total_energy_pf_mp"]
+
+        #adding elements here
+        el_df = self.getdf_sidephase_elements_MPDatabase(elementfilter=elementfilter)
+        self._side_phase_df = self.side_phases_df.append(el_df, ignore_index=True)
+
+    def setup_sidephase(self,
+                        sizes: list or tuple or None = (2, 3),
+                        mpkey: str = None,
+                        check_online: bool = True,
+                        remove_common_sp: bool or "mp" or "ase" = True,
+                        search_dbnew:bool=True,
+                        asedb_filter_func=None):
         """
         Looks for the side phases by chemical systems based on provided sizes(list, default 2 and 3 ),
         in the local database first. If an entry is not in the local database, search is done in the online materials
@@ -472,10 +552,9 @@ class MAXAnalyzer(MAXSpecies):
         elemental references. This makes sure that no correction is added into the formation energies, contrary to
         formation energies ('uncorr_formation_energy_per_formula') obtained from materials project API always containing correction contributions.
 
-        :param sizes:
-        :param mpkey:
-        :param check_online:
-        :return:
+        :param
+
+
         """
 
         self.MPDatabase_lookup(sizes=sizes, mpkey=mpkey, check_online=check_online, )
@@ -487,13 +566,14 @@ class MAXAnalyzer(MAXSpecies):
         self.side_phases_df.reset_index(drop=True, inplace=True)
 
         if self.side_phase_calculate_formation_energy or self.side_phase_formation_colname == "calc_formation_energy_per_formula":
+            print("Re-calculating formation energy of side phases")
             self.add_calculate_formation_energy_sidephases()
 
         # peratom energies, since for molecules,
         # per formula energies, will be numberofatomsinamolecule*energy_per_atom, just a hack at the moment
         # TODo: Convert the cohesive function to take proper molecular elements instead of atomic molecules,
 
-        self.calculate_total_energy_frmformation_sp(add_elements_df=True)
+        self.calculate_total_energy_frmformation_sp(add_elements_df=True,)
 
         ## get extra max dataframe
         # extra_sp_df = self.search_get_df_sp_chemsys_asedb(db=self.side_phase_asedb, exclude_overlap_rows=True)
@@ -518,40 +598,141 @@ class MAXAnalyzer(MAXSpecies):
         #     else:
         #         warnings.warn("Common side phases were not touched... I did nothing. Please specify either True, "
         #                       "'ase', 'mp'")
+
         if self.side_phase_asedb:
-            extra_sp_df = self.find_side_phases_from_asedb(db=self.side_phase_asedb, exclude_overlap_rows=True)
-            print("Adding extra side phases (obtained from ase database to pandas dataframe)")
+            side_phase_asedb = self.side_phase_asedb
+            if not isinstance(side_phase_asedb, (list, tuple)):
+                side_phase_asedb = [side_phase_asedb]
+
+            if search_dbnew == False:
+                extra_sp_df = DataFrame()
+                for sp_db in side_phase_asedb:
+                    df = self.find_side_phases_from_asedb(db=sp_db,
+                                                            exclude_overlap_rows=True,
+                                                            remove_common=remove_common_sp)
+
+                    extra_sp_df = extra_sp_df.append(df)
+
+                # it makes sense to get the lowest energy--- sort and then get the the lowest energy
+                #  ---assuming all the phases have same spacegroup!!!!!
+
+                print("Sorting the extra(other MAX dataframe) and then picking the lowest energy value by default.-----")
+                extra_sp_df.sort_values(by=["phase", "energy_per_atom"], ignore_index=True, inplace=True)
+
+                if self.verbosity >= 2:
+                    print(extra_sp_df)
+                #### select the higest
+                phases = extra_sp_df.phase.unique()
+
+                extra_lowest_sp_df = DataFrame()
+                for ph in phases:
+                   extra_lowest_sp_df = extra_lowest_sp_df.append(extra_sp_df[extra_sp_df.phase == ph].iloc[0])
+
+                extra_sp_df = extra_lowest_sp_df
+
+            else:
+                print("Using new method of searching dblst")
+
+                extra_sp_df = self.find_side_phases_from_asedblst( dblst=side_phase_asedb,
+                                                                   exclude_overlap_rows=True,
+                                                                   remove_common=remove_common_sp,
+                                                                   final_filter_function=asedb_filter_func)
+
+            print("Adding extra side phases --- (only MAX like) ----(obtained from ase database to pandas dataframe):")
+            print(extra_sp_df)
+            extra_sp_df["spacegroup"] = "P6_3/mmc"
+            # have to remove common compositions that match with MAX.df from extra side phase df
+            self.do_remove_common_max_from_spdf(side_phase_df=extra_sp_df)
+
             self._side_phase_df = self.side_phases_df.append(extra_sp_df, ignore_index=True)
 
         if self.verbosity >= 1:
             print("Final side phases:")
             print(self.side_phases_df)
 
-    def find_side_phases_from_asedb(self, db: str or dBcore, remove_common:bool or "mp" or "ase" = True,
-                                    exclude_overlap_rows:bool=True):
-        extra_sp_df = self.search_get_df_sp_chemsys_asedb(db=db, exclude_overlap_rows=exclude_overlap_rows)
-        if remove_common:
-            print("Removing common")
-            formulafunc = lambda x: Pymcomp(x).reduced_formula
-            sp_phases = self.side_phases_df.phase.apply(formulafunc)
-            extra_sp_ph = extra_sp_df.phase.apply(formulafunc)
-            if remove_common == "mp" or remove_common == True:
-                common = self.side_phases_df.loc[(sp_phases.isin(extra_sp_ph))]
-                if self.verbosity >= 1:
-                    print("Common side phase compositions are being dropped from MP(derived phases):")
-                    print(common)
-                self.side_phases_df.drop(common.index, inplace=True)
-            elif remove_common == "ase":
-                common = extra_sp_df.loc[(extra_sp_ph.isin(sp_phases))]
-                if self.verbosity >= 1:
-                    print("Common side phase compositions begin dropped from ase(local database):")
-                    print(common)
-                extra_sp_df.drop(common.index, inplace=True)
-            else:
-                warnings.warn("Common side phases were not touched... I did nothing. Please specify either True, "
-                              "'ase', 'mp'")
+    def setup_side_phase_explicit(self, dbslst:list or tuple, *args, **kwargs):
+        #search each db list
 
-        formulafunc = lambda x: Pymcomp(x).reduced_formula
+        sph_df = DataFrame()
+
+        for db in dbslst:
+            rows = self.search_permute_chemical_sytems_asedb(db, *args, **kwargs)
+            print(rows)
+            sph_df = sph_df.append(self.sidephase_aserows_to_df(rows=[r for rr in rows.values() for r in rr]),
+                                   ignore_index=True)
+
+        if self.side_phase_asedb:
+            other_max_df = self.search_get_df_sp_chemsys_asedb(exclude_overlap_rows=True)
+            sph_df = sph_df.append(other_max_df, ignore_index=True)
+
+        sph_df.drop_duplicates()
+
+        self.set_sidephase_df(sph_df)
+        #elements also
+        self.append_elements_side_df(elemental_energies=self.get_elemental_energies())
+
+    def find_side_phases_from_asedb(self, db: str or dBcore, remove_common:bool or "mp" or "ase" = True,
+                                    exclude_overlap_rows:bool= True):
+
+        extra_sp_df = self.search_get_df_sp_chemsys_asedb(db=db, exclude_overlap_rows=exclude_overlap_rows)
+
+        if remove_common: # remove common
+             self._do_remove_common(extra_sp_df=extra_sp_df, remove_common=remove_common)
+            # formulafunc = lambda x: Pymcomp(x).reduced_formula
+            # sp_phases = self.side_phases_df.phase.apply(formulafunc)
+            # extra_sp_ph = extra_sp_df.phase.apply(formulafunc)
+            # if remove_common == "mp" or remove_common == True:
+            #     common = self.side_phases_df.loc[(sp_phases.isin(extra_sp_ph))]
+            #     if self.verbosity >= 1:
+            #         print("Common side phase compositions are being dropped from MP(derived phases):")
+            #         print(common)
+            #     self.side_phases_df.drop(common.index, inplace=True)
+            # elif remove_common == "ase":
+            #     common = extra_sp_df.loc[(extra_sp_ph.isin(sp_phases))]
+            #     if self.verbosity >= 1:
+            #         print("Common side phase compositions begin dropped from ase(local database):")
+            #         print(common)
+            #     extra_sp_df.drop(common.index, inplace=True)
+            # else:
+            #     warnings.warn("Common side phases were not touched... I did nothing. Please specify either True, "
+            #                   "'ase', 'mp'")
+
+        return extra_sp_df
+
+    def _do_remove_common(self, extra_sp_df, remove_common: bool or 'mp' or 'ase'=True):
+
+           print("Removing common")
+
+           formulafunc = lambda x: Pymcomp(x).reduced_formula
+           sp_phases = self.side_phases_df.phase.apply(formulafunc)
+           extra_sp_ph = extra_sp_df.phase.apply(formulafunc)
+
+           if remove_common == "mp" or remove_common == True:
+               common = self.side_phases_df.loc[(sp_phases.isin(extra_sp_ph))]
+               if self.verbosity >= 1:
+                   print("Common side phase compositions are being dropped from MP(derived phases):")
+                   print(common)
+               self.side_phases_df.drop(common.index, inplace=True)
+           elif remove_common == "ase":
+               common = extra_sp_df.loc[(extra_sp_ph.isin(sp_phases))]
+               if self.verbosity >= 1:
+                   print("Common side phase compositions begin dropped from ase(local database):")
+                   print(common)
+               extra_sp_df.drop(common.index, inplace=True)
+           else:
+               warnings.warn("Common side phases were not touched... I did nothing. Please specify either True, "      
+                             "'ase', 'mp'")
+
+    def find_side_phases_from_asedblst(self, dblst: [dBcore], remove_common:bool or 'mp' or 'ase'=True,
+                                       exclude_overlap_rows:bool=True, final_filter_function=None, args=(), kwargs=()):
+
+        extra_sp_df = self.search_get_df_sp_chemsys_asedblst(db=dblst,exclude_overlap_rows=exclude_overlap_rows,
+                                                              final_filter_function=final_filter_function,args=args,
+                                                              kwargs=kwargs)
+
+        if remove_common:
+            self._do_remove_common(extra_sp_df, remove_common=remove_common)
+
         return extra_sp_df
 
     def add_calculate_formation_energy_sidephases(self):
@@ -585,13 +766,12 @@ class MAXAnalyzer(MAXSpecies):
                               self.Elements.composition}
         return elemental_energies
 
-
-    def ASEDatabase_lookup(self, elementfilterfunc=None, correction: bool = False):
+    def ASEDatabase_lookup(self, elementfilterfunc=None, maxrowsfilterfunc=None, correction: bool = False,):
         # search in the databses
 
         if not self.rows:
             assert self.maxdb
-            self.search_set_rows(asedb=self.maxdb)
+            self.search_set_rows(asedb=self.maxdb, filterfunc=maxrowsfilterfunc)
         else:
             warnings.warn("MAX phases are already obtained from the database")
 
@@ -604,6 +784,10 @@ class MAXAnalyzer(MAXSpecies):
 
         if correction:
             NotImplementedError("Corrections to the total energy from database row are not implemented")
+
+        if self.max_df is not None:
+            warnings.warn("MAX dataframe was already created --skipping the creation")
+            return
 
         self.create_set_maxphase_dataframe()
 
@@ -643,6 +827,17 @@ class MAXAnalyzer(MAXSpecies):
                                      "Supply elementfilterfunction".format(el))
 
         self.Elements.set_entries(elentries)
+
+    def search_setdf_in_mpdb(self, sort_by_e_above_hull: bool = True):
+        max_entries = self.search_in_mpdb(sort_by_e_above_hull=sort_by_e_above_hull)
+        for k,en in max_entries.items():
+            assert len(en) == 1
+            max_entries[k] = en[0]
+        self.set_entries(max_entries)
+
+        max_df = self.to_dataframe_entries()
+        max_df["energy_per_formula"] = max_df["uncorr_total_energy_per_formula"]
+        self._max_df = max_df
 
     def MPDatabase_lookup(self, sizes=[2, 3], mpkey: str = None, check_online=True):
         if not self.database.collection:
@@ -755,7 +950,7 @@ class MAXAnalyzer(MAXSpecies):
 
         assert pr or index or formula
         max_df = self.max_df
-        side_ph_series = self.side_phases_df.phase
+        side_ph_phase = self.side_phases_df.phase
         if not pr:
             pr = self[index] or self[formula]
         els = pr.elementsmap
@@ -764,10 +959,11 @@ class MAXAnalyzer(MAXSpecies):
 
         # s_max_ph = side_ph_series.loc[side_chemsys_series == "-".join(sorted(elements))]
 
-        s_ph = side_ph_series.loc[(side_ph_series.str.contains(els["M"]))
+        s_ph = side_ph_phase.loc[(side_ph_phase.str.contains(els["M"]))
                                   | (side_chemsys_series == els["A"])
                                   | (side_chemsys_series == els["X"])
                                   | (side_chemsys_series == "-".join(sorted([els["A"], els["X"]])))]
+        # this is adding MAX phase
 
         if self.side_phase_append_with_MAX:
             max_side_phases = max_df.phase.loc[
@@ -775,6 +971,7 @@ class MAXAnalyzer(MAXSpecies):
             s_ph = np.append(s_ph, max_side_phases)
 
         s_ph = np.unique(s_ph)
+        print("Side phases being used for a MAX phase: {}\n{}".format(pr.formula, s_ph))
         return s_ph
 
     def find_side_phases_comp(self, index: int = None, formula: int = None, ):
@@ -819,7 +1016,8 @@ class MAXAnalyzer(MAXSpecies):
         for syes in self.generate_unique_systems(sizes=sizes):
             entries = self.database.get_entries_system(syes.split("-"), **entrykwargs)
             if not entries:
-                warnings.warn("System {} does not exist in the local database\nlooking in mp online database"
+                warnings.warn("System {} does not exist in the local database\nwill search in mp online database if"
+                              "check_online is set to True"
                               .format(syes))
                 if check_online:
                     entries = smp.get_entries(syes, property_data=["formation_energy_per_atom",
@@ -836,7 +1034,6 @@ class MAXAnalyzer(MAXSpecies):
 
     def set_side_phase_df(self,
                           Entries: dict,
-                          decimtol: int = 6,
                           remove_max_comps: bool = True):
         """
         Note: There is a bug in API (v.2020.0) of materialsproject in pymatgen. The correction_energy,correction etc.
@@ -852,61 +1049,141 @@ class MAXAnalyzer(MAXSpecies):
         :param remove_max_comps:
         :return:
         """
+        print("For non Mp database, stability is considered as energy above hull (e_above_hull)")
+        tstentry = Entries[next(iter(Entries))][0]
 
-        side_phase_df = DataFrame(
-            [(entry.name, sys, entry.entry_id, entry.data["e_above_hull"], entry.correction_per_atom,
-              entry.data["formation_energy_per_atom"],
-              round(entry.data["formation_energy_per_atom"] - entry.correction_per_atom, decimtol),
-              round((entry.data["formation_energy_per_atom"] - entry.correction_per_atom) *
-                    entry.composition.reduced_composition.num_atoms, decimtol),
-              round(entry.uncorrected_energy_per_atom * entry.composition.reduced_composition.num_atoms, decimtol),
-              round(entry.uncorrected_energy_per_atom, decimtol),
-              entry.data.get("spacegroup")["symbol"]
-              ) for sys, entries in Entries.items() for entry in entries],
-            columns=["phase", "chemsys", "mp-id", "e_above_hull", "correction_per_atom",
-                     "corr_formation_energy_per_atom", "uncorr_formation_energy_per_atom",
-                     "uncorr_formation_energy_per_formula",
-                     "uncorr_total_energy_pf_mp",
-                     "uncorr_total_energy_pa_mp",
-                     "spacegroup"])
+        if "mp-" in str(tstentry.entry_id): # means we have mp-type data
+            side_phase_df = DataFrame(
+                [(entry.name, sys, entry.entry_id, entry.data.get("e_above_hull", entry.data.get("stability")), entry.correction_per_atom,
+                entry.data.get("formation_energy_per_atom", entry.data.get("delta_e")),
+                 round(entry.data.get("formation_energy_per_atom", entry.data.get("delta_e")) - entry.correction_per_atom, self.decimtol),
+                round((entry.data.get("formation_energy_per_atom", entry.data.get("delta_e")) - entry.correction_per_atom) *
+                        entry.composition.reduced_composition.num_atoms, self.decimtol),
+                round(entry.uncorrected_energy_per_atom * entry.composition.reduced_composition.num_atoms, self.decimtol),
+                round(entry.uncorrected_energy_per_atom, self.decimtol),
+                entry.data.get("spacegroup")["symbol"],
+                ) for sys, entries in Entries.items() for entry in entries],
+                columns=["phase", "chemsys", "mp-id", "e_above_hull", "correction_per_atom",
+                        "corr_formation_energy_per_atom", "uncorr_formation_energy_per_atom",
+                        "uncorr_formation_energy_per_formula",
+                        "uncorr_total_energy_pf_mp",
+                        "uncorr_total_energy_pa_mp",
+                        "spacegroup"])
+
+        else:
+            side_phase_df = DataFrame(
+                [(entry.name, sys, entry.entry_id,  entry.data.get("stability"),
+                  entry.correction_per_atom, entry.data.get("delta_e"),
+                  entry.data.get("delta_e") - entry.correction_per_atom,
+                  round((entry.data.get("delta_e") - entry.correction_per_atom)
+                        * entry.composition.reduced_composition.num_atoms, self.decimtol),
+                  entry.data.get("spacegroup"),
+                    ) for sys, entries in Entries.items() for entry in entries],
+
+                columns=["phase", "chemsys", "mp-id", "e_above_hull", "correction_per_atom",
+                        "corr_formation_energy_per_atom", "uncorr_formation_energy_per_atom",
+                        "uncorr_formation_energy_per_formula",
+                        "spacegroup"])
 
         if not remove_max_comps:
             self._side_phase_df = side_phase_df
             return
-        formulafunc = lambda x: Pymcomp(x).reduced_composition.iupac_formula.replace(" ", "")
-        phases = side_phase_df.phase.apply(formulafunc)
-        sg = side_phase_df.spacegroup
-        if self.side_phase_remove_MAX:
-            if self.max_df is not None:
-                max_ph = self.max_df.phase.apply(formulafunc)
-            else:
-                max_ph = np.asarray([Pycomp(i).iupac_formula for i in self.formula])
 
-            common = side_phase_df.loc[(phases.isin(max_ph)) & (sg == "P6_3/mmc")]  # drop overlapping compositions with MAX
+        # formulafunc = lambda x: Pymcomp(x).reduced_composition.iupac_formula.replace(" ", "")
+        # phases = side_phase_df.phase.apply(formulafunc)
+        # sg = side_phase_df.spacegroup
+        # if self.side_phase_remove_MAX:
+        #     if self.max_df is not None:
+        #         max_ph = self.max_df.phase.apply(formulafunc)
+        #     else:
+        #         max_ph = np.asarray([Pycomp(i).iupac_formula for i in self.formula])
+        #
+        #     common = side_phase_df.loc[(phases.isin(max_ph)) & ((sg == "P6_3/mmc") | (sg == "P63/mmc"))]  # drop overlapping compositions with MAX
+        #
+        #     if self.verbosity >= 1:
+        #         print("Removing common MAX Compositions:")
+        #         print(common)
+        #
+        #     side_phase_df.drop(common.index, inplace=True)
+        #     side_phase_df.reset_index(drop=True, inplace=True)
 
-            if self.verbosity >= 1:
-                print("Common MAX Compositions:")
-                print(common)
-
-            side_phase_df.drop(common.index, inplace=True)
-            side_phase_df.reset_index(drop=True, inplace=True)
+        self.do_remove_common_max_from_spdf(side_phase_df=side_phase_df)
 
         self._side_phase_df = side_phase_df
 
-    def search_sidephase_chemsys_asedb(self, db: str or dBcore = None, exclude_overlap_rows: bool = True):
+    def do_remove_common_max_from_spdf(self, side_phase_df : DataFrame):
+
+        formulafunc = lambda x: Pymcomp(x).reduced_composition.iupac_formula.replace(" ", "")
+
+        phases = side_phase_df.phase.apply(formulafunc)
+        sg = side_phase_df.spacegroup
+
+        if self.max_df is not None:
+          max_ph = self.max_df.phase.apply(formulafunc)
+
+        else:
+          max_ph = np.asarray([Pycomp(i).iupac_formula for i in self.formula])
+
+        common = side_phase_df.loc[(phases.isin(max_ph)) & ((sg == "P6_3/mmc") | (sg == "P63/mmc"))]
+
+        if self.verbosity >= 1:
+          print("Removing common MAX Compositions:")
+          print(common)
+
+        side_phase_df.drop(common.index, inplace=True)
+        side_phase_df.reset_index(drop=True, inplace=True)
+
+    def search_sidephase_chemsys_asedb(self,
+                                       db: str or dBcore = None,
+                                       exclude_overlap_rows: bool = True, *searchargs, **searchkwargs):
+
         """ Searches the phases acting as side phases in the ase database, based on the chemical system of MAX . In other words,
         searches for  any  compositions containing all of the elements present in the chemical system
         defined by the given MAX phase(including other MAX phases) in the  local ase database."""
 
         if not db:
             db = self.side_phase_asedb
-        side_Rows = self.search_chemical_system_asedb(db=db)
+        side_Rows = self.search_chemical_system_asedb(db=db, *searchargs, **searchkwargs)
 
         if self.rows and exclude_overlap_rows == True:
             for i, f in enumerate(self.formula):
                 uqid = self.composition[i].row.row.unique_id
                 side_Rows[f] = [r for r in side_Rows[f] if r.unique_id != uqid]
+
+        #filtering here
+        if self._sp_asedb_filterfunc:
+            print("---------Side phase filter function was provided----------")
+            for f, ros in side_Rows.items():
+                side_Rows[f] = filter(self.sp_asedb_filterfunc, ros)
+
         return side_Rows
+
+    def search_sidephase_chemsys_asedblst(self,
+                                          db: list or tuple = None,
+                                          exclude_overlap_rows:bool = True,
+                                          final_filter_function=None,
+                                           searchargs: list = (), searchkwargs: [dict]= ()):
+
+        if not db:
+            db = self.side_phase_asedb
+
+        assert isinstance(db, (list, tuple))
+        Rows = self.search_chemical_system_asedb(db=db, args=searchargs, kwargs=searchkwargs)
+
+        if self.rows and exclude_overlap_rows == True:
+            self._remove_common_rows(rows=Rows)
+
+        if final_filter_function:
+            print("-----------------final filter function was provided ------------------")
+            for f, ros in Rows.items():
+                Rows[f] = filter(final_filter_function, ros)
+
+        return Rows
+
+    def _remove_common_rows(self, rows):
+        for i,f in enumerate(self.formula):
+            uqid = self.composition[i].row.row.unique_id
+            rows[f] = [r for r in rows[f] if r.unique_id !=uqid]
 
     def search_sidephase_permute_chemsys_asedb(self, db:str or dBcore = None, exclude_overlap_rows:bool = True, *args,
                                                **kwargs):
@@ -938,7 +1215,6 @@ class MAXAnalyzer(MAXSpecies):
             warnings.warn("MAX Rows are absent, I cannot find and remove the overlapping rows from the inputs rows")
         return Rows
 
-
     def sidephase_aserows_to_df(self, rows: list or tuple):
         sp_species = self.from_aserows(rows)
         df = sp_species.to_dataframe(decimtol=self.decimtol)
@@ -956,6 +1232,13 @@ class MAXAnalyzer(MAXSpecies):
 
         rows = self.search_sidephase_chemsys_asedb(db=db, exclude_overlap_rows=exclude_overlap_rows)
         return self.sidephase_aserows_to_df(rows=[r for rr in rows.values() for r in rr])
+
+    def search_get_df_sp_chemsys_asedblst(self, db: [dBcore], exclude_overlap_rows:bool = True,
+                                          final_filter_function=None, args= (), kwargs=()):
+
+       rows = self.search_sidephase_chemsys_asedblst(db=db, exclude_overlap_rows=exclude_overlap_rows,
+                                                     final_filter_function=final_filter_function, args=args, kwargs=kwargs)
+       return self.sidephase_aserows_to_df(rows=[r for rr in rows.values() for r in rr])
 
     def searchset_sidephase_df(self, sizes: list or tuple, mpkey: str = None, check_online: bool = True,
                                **entrykwargs):
@@ -1030,7 +1313,7 @@ class MAXAnalyzer(MAXSpecies):
 
     def calcadd_enthalpyreactions(self):
         self.reactions_df["enthalpy"] = self.reactions_df.apply(Pandasutils.pd_calculate_reaction_energy, axis=1,
-                                                                verbosity=self.verbosity)
+                                                                verbosity=self.verbosity, decimtol=self.decimtol)
 
     def add_enthalpyperatom(self):
         self.reactions_df["enthalpy_per_atom"] = Pandasutils.enthalpy_peratom(self.reactions_df, decimtol=self.decimtol)

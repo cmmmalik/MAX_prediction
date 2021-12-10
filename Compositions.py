@@ -336,16 +336,52 @@ class Species(CoreSpecies):
 
         return Rows
 
+    def Search_chemical_systems_asedblst(self, db_lst:[dBcore or str], args=(), kwargs=()):
+
+        if not kwargs:
+            kwargs = [dict()]*len(db_lst)
+        if not args:
+            args = [()]*len(db_lst)
+
+        All_rows = []
+        for i, db in enumerate(db_lst):
+            rows = self.search_chemical_system_asedb(db, *args[i], **kwargs[i])
+            All_rows.append(rows)
+
+        Rows = {f: [row for rows in All_rows for row in rows[f]] for f in self.formula}
+
+        return Rows
+
+
 
     def search_permute_chemical_sytems_asedb(self, db: dBcore or str, *args, **kwargs):
         db = SearcherdB(db=db, verbosity=self.verbosity)
         Rows = {}
         chemsys_generator = Genchemicalsystems(separator=",")
         for i, f in enumerate(self.formula):
-            els = sorted(self.composition[i].chemical_system.split("-"))
+            csys = self.composition[i].chemical_system
+            els = sorted(csys.split("-"))
+
             chemsys_generator.elements = els
-            Rows[f] = [row for chemsys in chemsys_generator.unique_combinations_sizes(sizes=list(range(2, len(els))))
-                       for row in db.gen_rows(chemsys, *args, **kwargs)]
+            print(els)
+            rrows = []
+            uqid = []
+
+            for chemsys in chemsys_generator.unique_combinations_sizes(sizes=list(range(2, len(els)+1))):
+                print("Chemsys looking:",chemsys)
+                for row in db.gen_rows(chemsys, *args, **kwargs):
+                    if row.unique_id in uqid:
+                        print("Row matched existed already, skipping")
+                        continue
+
+                    if ",".join(sorted(Composition(row.formula).chemical_system.split("-"))) in chemsys :
+                        rrows.append(row)
+                        uqid.append(row.unique_id)
+
+            Rows[f] = rrows
+            # Rows[f] = [row for chemsys in chemsys_generator.unique_combinations_sizes(sizes=list(range(2, len(els))))
+            #           for row in db.gen_rows(chemsys, *args, **kwargs)
+            #           ]
 
         return Rows
 
