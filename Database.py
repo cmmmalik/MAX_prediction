@@ -37,7 +37,7 @@ class Search_Engine:
             self.collection = None
             self._collection_name = None
             return
-        assert self.db
+        assert self.db != None
         self.collection = self.db[value]
         self._collection_name = value
 
@@ -257,6 +257,50 @@ class Rows:
         return [r.energy for r in self.rows]
 
 
+class Entry:
+
+    def __init__(self, entry: ComputedEntry or ComputedStructureEntry):
+        self._entry = entry
+
+    def __repr__(self):
+        return self._entry.__repr__()
+
+    def __str__(self):
+        self._entry.__str__()
+
+    @property
+    def entry(self):
+        return self._entry
+
+    @property
+    def composition(self):
+        return self._entry.composition
+
+    @property
+    def data(self):
+        return self._entry.data
+
+    @entry.setter
+    def entry(self, entry: ComputedEntry or ComputedStructureEntry):
+        if not isinstance(entry, (ComputedEntry, ComputedStructureEntry)):
+            raise ValueError("'entry' must be have type {} or {}, instead received {}".format(ComputedEntry,
+                                                                                              ComputedStructureEntry,
+                                                                                              type(entry)))
+        self._entry = entry
+
+    @property
+    def energy(self):
+        return self.entry.energy
+
+    @property
+    def energy_per_atom(self):
+        return self.energy / self.entry.composition.num_atoms
+
+    @property
+    def energy_per_formula(self):
+        return self.energy_per_atom * self.entry.composition.reduced_composition.num_atoms
+
+
 class DummyRow(AtomsRow):
 
     def __init__(self, numbers: list or tuple, energy: float = None, keys_value_paris: dict = None, **kwargs):
@@ -265,3 +309,9 @@ class DummyRow(AtomsRow):
             dct["key_value_pairs"].update(keys_value_paris)
         dct.update(kwargs)
         super(DummyRow, self).__init__(dct=dct)
+
+    def __repr__(self):
+        return super(DummyRow, self).__repr__()
+
+    def __str__(self):
+        super(DummyRow, self).__str__()

@@ -1,0 +1,590 @@
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" >
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Compositions &mdash; MAX_prediction 1.0.0 documentation</title>
+      <link rel="stylesheet" href="../_static/pygments.css" type="text/css" />
+      <link rel="stylesheet" href="../_static/css/theme.css" type="text/css" />
+      <link rel="stylesheet" href="../_static/custom.css" type="text/css" />
+  <!--[if lt IE 9]>
+    <script src="../_static/js/html5shiv.min.js"></script>
+  <![endif]-->
+  
+        <script data-url_root="../" id="documentation_options" src="../_static/documentation_options.js"></script>
+        <script src="../_static/jquery.js"></script>
+        <script src="../_static/underscore.js"></script>
+        <script src="../_static/doctools.js"></script>
+    <script src="../_static/js/theme.js"></script>
+    <link rel="index" title="Index" href="../genindex.html" />
+    <link rel="search" title="Search" href="../search.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+            <a href="../index.html" class="icon icon-home"> MAX_prediction
+          </a>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <ul>
+<li class="toctree-l1"><a class="reference internal" href="../Compositions.html">Compositions module</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../Database.html">Database module</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../base.html">base module</a></li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../index.html">MAX_prediction</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="../index.html" class="icon icon-home"></a> &raquo;</li>
+          <li><a href="index.html">Module code</a> &raquo;</li>
+      <li>Compositions</li>
+      <li class="wy-breadcrumbs-aside">
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <h1>Source code for Compositions</h1><div class="highlight"><pre>
+<span></span><span class="kn">import</span> <span class="nn">re</span>
+<span class="kn">from</span> <span class="nn">itertools</span> <span class="kn">import</span> <span class="n">combinations</span> <span class="k">as</span> <span class="n">itcombinations</span>
+
+<span class="kn">import</span> <span class="nn">numpy</span> <span class="k">as</span> <span class="nn">np</span>
+<span class="kn">from</span> <span class="nn">MAX_prediction.Database</span> <span class="kn">import</span> <span class="n">SearcherdB</span><span class="p">,</span> <span class="n">Search_Engine</span><span class="p">,</span> <span class="n">Row</span><span class="p">,</span> <span class="n">Entry</span>
+<span class="kn">from</span> <span class="nn">ase.db.core</span> <span class="kn">import</span> <span class="n">Database</span> <span class="k">as</span> <span class="n">dBcore</span><span class="p">,</span> <span class="n">AtomsRow</span>
+<span class="kn">from</span> <span class="nn">mse.ext.materials_project</span> <span class="kn">import</span> <span class="n">SmartMPRester</span>
+<span class="kn">from</span> <span class="nn">pandas</span> <span class="kn">import</span> <span class="n">DataFrame</span>
+<span class="c1"># from mse.composition_utils import EnhancedComposition as Composition</span>
+<span class="kn">from</span> <span class="nn">pymatgen.core.composition</span> <span class="kn">import</span> <span class="n">Composition</span>
+<span class="kn">from</span> <span class="nn">pymatgen.core.periodic_table</span> <span class="kn">import</span> <span class="n">Element</span> <span class="k">as</span> <span class="n">Elts</span>
+<span class="kn">from</span> <span class="nn">pymatgen.entries.computed_entries</span> <span class="kn">import</span> <span class="n">ComputedEntry</span><span class="p">,</span> <span class="n">ComputedStructureEntry</span>
+
+
+<div class="viewcode-block" id="CoreSpecie"><a class="viewcode-back" href="../Compositions.html#Compositions.CoreSpecie">[docs]</a><span class="k">class</span> <span class="nc">CoreSpecie</span><span class="p">:</span>
+
+    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">formula</span><span class="p">:</span> <span class="nb">str</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_composition</span> <span class="o">=</span> <span class="kc">None</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_row</span> <span class="o">=</span> <span class="kc">None</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_entry</span> <span class="o">=</span> <span class="kc">None</span>  <span class="c1"># single entry per specie</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">formula</span> <span class="o">=</span> <span class="n">formula</span>
+
+    <span class="k">def</span> <span class="fm">__repr__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="n">st</span> <span class="o">=</span> <span class="s2">&quot;</span><span class="si">{}</span><span class="s2">&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">formula</span><span class="p">)</span>
+        <span class="k">return</span> <span class="s2">&quot;</span><span class="si">{0}</span><span class="s2">(</span><span class="si">{1}</span><span class="s2">)&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">CoreSpecie</span><span class="o">.</span><span class="vm">__name__</span><span class="p">,</span> <span class="n">st</span><span class="p">)</span>
+
+    <span class="k">def</span> <span class="fm">__str__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="fm">__repr__</span><span class="p">()</span>
+
+    <span class="nd">@property</span>
+    <span class="k">def</span> <span class="nf">formula</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_formula</span>
+
+    <span class="nd">@formula</span><span class="o">.</span><span class="n">setter</span>
+    <span class="k">def</span> <span class="nf">formula</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">form</span><span class="p">:</span> <span class="nb">str</span><span class="p">):</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">form</span><span class="p">,</span> <span class="nb">str</span><span class="p">):</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;Invalid type &#39;</span><span class="si">{}</span><span class="s2">&#39; of formula, expected </span><span class="si">{}</span><span class="s2">&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="nb">type</span><span class="p">(</span><span class="n">form</span><span class="p">),</span> <span class="nb">str</span><span class="p">))</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">_composition</span> <span class="o">=</span> <span class="n">Composition</span><span class="p">(</span><span class="n">form</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_formula</span> <span class="o">=</span> <span class="n">form</span>
+
+    <span class="nd">@formula</span><span class="o">.</span><span class="n">deleter</span>
+    <span class="k">def</span> <span class="nf">formula</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">del</span> <span class="bp">self</span><span class="o">.</span><span class="n">_formula</span>
+        <span class="k">del</span> <span class="bp">self</span><span class="o">.</span><span class="n">composition</span>
+
+    <span class="nd">@property</span>
+    <span class="k">def</span> <span class="nf">composition</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_composition</span>
+
+    <span class="nd">@composition</span><span class="o">.</span><span class="n">deleter</span>
+    <span class="k">def</span> <span class="nf">composition</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">del</span> <span class="bp">self</span><span class="o">.</span><span class="n">_composition</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">row</span><span class="p">:</span>
+            <span class="k">del</span> <span class="bp">self</span><span class="o">.</span><span class="n">row</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">entry</span><span class="p">:</span>
+            <span class="k">del</span> <span class="bp">self</span><span class="o">.</span><span class="n">entry</span>
+
+    <span class="nd">@property</span>
+    <span class="k">def</span> <span class="nf">chemical_system</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">composition</span><span class="o">.</span><span class="n">chemical_system</span>
+
+<div class="viewcode-block" id="CoreSpecie.chemical_system_sorted"><a class="viewcode-back" href="../Compositions.html#Compositions.CoreSpecie.chemical_system_sorted">[docs]</a>    <span class="k">def</span> <span class="nf">chemical_system_sorted</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">separater</span><span class="o">=</span><span class="s2">&quot;,&quot;</span><span class="p">):</span>
+        <span class="n">chemsys</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">chemical_system</span>
+        <span class="k">return</span> <span class="s2">&quot;</span><span class="si">{}</span><span class="s2">&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">separater</span><span class="p">)</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="nb">sorted</span><span class="p">(</span><span class="n">chemsys</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s2">&quot;-&quot;</span><span class="p">)))</span></div>
+
+    <span class="nd">@property</span>
+    <span class="k">def</span> <span class="nf">row</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_row</span>
+
+    <span class="nd">@row</span><span class="o">.</span><span class="n">setter</span>
+    <span class="k">def</span> <span class="nf">row</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">row</span><span class="p">:</span> <span class="n">AtomsRow</span><span class="p">):</span>
+        <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">row</span><span class="p">,</span> <span class="n">AtomsRow</span><span class="p">):</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_row</span> <span class="o">=</span> <span class="n">Row</span><span class="p">(</span><span class="n">row</span><span class="o">=</span><span class="n">row</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;Expected an instance of </span><span class="si">{}</span><span class="s2">, instead got </span><span class="si">{}</span><span class="s2">&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">AtomsRow</span><span class="p">,</span> <span class="nb">type</span><span class="p">(</span><span class="n">row</span><span class="p">)))</span>
+
+    <span class="nd">@row</span><span class="o">.</span><span class="n">deleter</span>
+    <span class="k">def</span> <span class="nf">row</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">del</span> <span class="bp">self</span><span class="o">.</span><span class="n">_row</span>
+
+    <span class="nd">@property</span>
+    <span class="k">def</span> <span class="nf">entry</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_entry</span>
+
+    <span class="nd">@entry</span><span class="o">.</span><span class="n">deleter</span>
+    <span class="k">def</span> <span class="nf">entry</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">del</span> <span class="bp">self</span><span class="o">.</span><span class="n">_entry</span>
+
+    <span class="nd">@entry</span><span class="o">.</span><span class="n">setter</span>
+    <span class="k">def</span> <span class="nf">entry</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">value</span><span class="p">:</span> <span class="n">ComputedEntry</span> <span class="ow">or</span> <span class="n">ComputedStructureEntry</span><span class="p">):</span>
+        <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">value</span><span class="p">,</span> <span class="p">(</span><span class="n">ComputedEntry</span><span class="p">,</span> <span class="n">ComputedStructureEntry</span><span class="p">)):</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_entry</span> <span class="o">=</span> <span class="n">Entry</span><span class="p">(</span><span class="n">value</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;Expected an instance of </span><span class="si">{}</span><span class="s2"> or </span><span class="si">{}</span><span class="s2">, instead got </span><span class="si">{}</span><span class="s2">&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">ComputedEntry</span><span class="p">,</span>
+                                                                                       <span class="n">ComputedStructureEntry</span><span class="p">,</span>
+                                                                                       <span class="nb">type</span><span class="p">(</span><span class="n">value</span><span class="p">)))</span>
+
+    <span class="nd">@property</span>
+    <span class="k">def</span> <span class="nf">energy_per_formula</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">row</span><span class="o">.</span><span class="n">energy_per_formula</span>
+
+    <span class="nd">@property</span>
+    <span class="k">def</span> <span class="nf">energy_per_atom</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">row</span><span class="o">.</span><span class="n">energy_per_atom</span>
+
+    <span class="nd">@property</span>
+    <span class="k">def</span> <span class="nf">energy_per_atom_in_entry</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">entry</span><span class="o">.</span><span class="n">energy_per_atom</span>
+
+    <span class="nd">@property</span>
+    <span class="k">def</span> <span class="nf">energy_per_formula_in_entry</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">entry</span><span class="o">.</span><span class="n">energy_per_formula</span></div>
+
+
+<div class="viewcode-block" id="CoreSpecies"><a class="viewcode-back" href="../Compositions.html#Compositions.CoreSpecies">[docs]</a><span class="k">class</span> <span class="nc">CoreSpecies</span><span class="p">:</span>
+
+    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">formulas</span><span class="p">:</span> <span class="nb">list</span> <span class="ow">or</span> <span class="nb">tuple</span> <span class="ow">or</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">formula</span> <span class="o">=</span> <span class="n">formulas</span>
+
+    <span class="k">def</span> <span class="fm">__repr__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="n">st</span> <span class="o">=</span> <span class="s2">&quot;</span><span class="si">{}</span><span class="s2">&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">formula</span><span class="p">)</span>
+        <span class="k">return</span> <span class="s2">&quot;</span><span class="si">{}</span><span class="s2">(</span><span class="si">{}</span><span class="s2">)&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">CoreSpecies</span><span class="o">.</span><span class="vm">__name__</span><span class="p">,</span> <span class="n">st</span><span class="p">)</span>
+
+    <span class="k">def</span> <span class="fm">__str__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="fm">__repr__</span><span class="p">()</span>
+
+    <span class="k">def</span> <span class="fm">__getitem__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">index</span><span class="p">):</span>
+        <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">index</span><span class="p">,</span> <span class="nb">int</span><span class="p">):</span>
+            <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_composition</span><span class="p">[</span><span class="n">index</span><span class="p">]</span>
+
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_find_from_name</span><span class="p">(</span><span class="n">index</span><span class="p">)</span>
+
+    <span class="k">def</span> <span class="fm">__delitem__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">key</span><span class="p">):</span>
+        <span class="k">def</span> <span class="nf">_delete</span><span class="p">(</span><span class="n">index</span><span class="p">):</span>
+            <span class="n">mask</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">ones</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">formula</span><span class="o">.</span><span class="n">shape</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="nb">bool</span><span class="p">)</span>
+            <span class="n">mask</span><span class="p">[</span><span class="n">index</span><span class="p">]</span> <span class="o">=</span> <span class="kc">False</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_formula</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">formula</span><span class="p">[</span><span class="n">mask</span><span class="p">]</span>
+            <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">index</span><span class="p">,</span> <span class="nb">int</span><span class="p">):</span>
+                <span class="n">index</span> <span class="o">=</span> <span class="p">[</span><span class="n">index</span><span class="p">]</span>
+            <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">sorted</span><span class="p">(</span><span class="n">index</span><span class="p">,</span> <span class="n">reverse</span><span class="o">=</span><span class="kc">True</span><span class="p">):</span>
+                <span class="k">del</span> <span class="bp">self</span><span class="o">.</span><span class="n">_composition</span><span class="p">[</span><span class="n">i</span><span class="p">]</span>
+
+        <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">key</span><span class="p">,</span> <span class="p">(</span><span class="nb">int</span><span class="p">,</span> <span class="nb">list</span><span class="p">)):</span>
+            <span class="n">_delete</span><span class="p">(</span><span class="n">index</span><span class="o">=</span><span class="n">key</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">index</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_find_index_name</span><span class="p">(</span><span class="n">name</span><span class="o">=</span><span class="n">key</span><span class="p">)</span>
+            <span class="n">_delete</span><span class="p">(</span><span class="n">index</span><span class="o">=</span><span class="n">index</span><span class="p">)</span>
+
+    <span class="k">def</span> <span class="nf">_find_from_name</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">index</span><span class="p">):</span>
+
+        <span class="n">index</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_find_index_name</span><span class="p">(</span><span class="n">index</span><span class="p">)</span>
+        <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">index</span><span class="p">)</span> <span class="o">&gt;</span> <span class="mi">1</span><span class="p">:</span>
+            <span class="k">return</span> <span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">_composition</span><span class="p">[</span><span class="n">i</span><span class="p">]</span> <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="n">index</span><span class="p">]</span>
+
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_composition</span><span class="p">[</span><span class="n">index</span><span class="p">[</span><span class="mi">0</span><span class="p">]]</span>
+
+    <span class="k">def</span> <span class="nf">_find_index_name</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">name</span><span class="p">):</span>
+        <span class="n">index</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">where</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">formula</span> <span class="o">==</span> <span class="n">name</span><span class="p">)[</span><span class="mi">0</span><span class="p">]</span>
+        <span class="k">if</span> <span class="n">index</span><span class="o">.</span><span class="n">size</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">KeyError</span><span class="p">(</span><span class="s2">&quot;&#39;</span><span class="si">{}</span><span class="s2">&#39; key was not found&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">index</span><span class="p">))</span>
+        <span class="k">return</span> <span class="n">index</span>
+
+    <span class="nd">@property</span>
+    <span class="k">def</span> <span class="nf">formula</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_formula</span>
+
+    <span class="nd">@formula</span><span class="o">.</span><span class="n">setter</span>
+    <span class="k">def</span> <span class="nf">formula</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">value</span><span class="p">:</span> <span class="nb">list</span> <span class="ow">or</span> <span class="nb">tuple</span> <span class="ow">or</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_composition</span> <span class="o">=</span> <span class="p">[</span><span class="n">CoreSpecie</span><span class="p">(</span><span class="n">i</span><span class="p">)</span> <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="n">value</span><span class="p">]</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_formula</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">asarray</span><span class="p">(</span><span class="n">value</span><span class="p">)</span>
+
+    <span class="nd">@property</span>
+    <span class="k">def</span> <span class="nf">composition</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_composition</span>
+
+    <span class="nd">@property</span>
+    <span class="k">def</span> <span class="nf">unique_formula</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">return</span> <span class="n">np</span><span class="o">.</span><span class="n">unique</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">formula</span><span class="p">)</span>
+
+    <span class="nd">@property</span>
+    <span class="k">def</span> <span class="nf">energies_per_atom</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">return</span> <span class="n">np</span><span class="o">.</span><span class="n">asarray</span><span class="p">([</span><span class="n">comp</span><span class="o">.</span><span class="n">energy_per_atom</span> <span class="k">for</span> <span class="n">comp</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">composition</span><span class="p">])</span>
+
+    <span class="nd">@property</span>
+    <span class="k">def</span> <span class="nf">energies_per_formula</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">return</span> <span class="n">np</span><span class="o">.</span><span class="n">asarray</span><span class="p">([</span><span class="n">comp</span><span class="o">.</span><span class="n">energy_per_formula</span> <span class="k">for</span> <span class="n">comp</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">composition</span><span class="p">])</span>
+
+    <span class="nd">@property</span>
+    <span class="k">def</span> <span class="nf">energies_per_atom_in_entry</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">return</span> <span class="n">np</span><span class="o">.</span><span class="n">asarray</span><span class="p">([</span><span class="n">comp</span><span class="o">.</span><span class="n">energy_per_atom_in_entry</span> <span class="k">for</span> <span class="n">comp</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">composition</span><span class="p">])</span>
+
+    <span class="nd">@property</span>
+    <span class="k">def</span> <span class="nf">energies_per_formula_in_entry</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">return</span> <span class="n">np</span><span class="o">.</span><span class="n">asarray</span><span class="p">([</span><span class="n">comp</span><span class="o">.</span><span class="n">energy_per_formula_in_entry</span> <span class="k">for</span> <span class="n">comp</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">composition</span><span class="p">])</span>
+
+<div class="viewcode-block" id="CoreSpecies.to_dataframe"><a class="viewcode-back" href="../Compositions.html#Compositions.CoreSpecies.to_dataframe">[docs]</a>    <span class="k">def</span> <span class="nf">to_dataframe</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">decimtol</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">6</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Only adds basic quantities into the dataframe&quot;&quot;&quot;</span>
+        <span class="n">df</span> <span class="o">=</span> <span class="n">DataFrame</span><span class="p">([(</span><span class="n">formula</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">composition</span><span class="p">[</span><span class="n">i</span><span class="p">]</span><span class="o">.</span><span class="n">energy_per_formula</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">composition</span><span class="p">[</span><span class="n">i</span><span class="p">]</span><span class="o">.</span><span class="n">energy_per_atom</span><span class="p">,</span>
+                         <span class="bp">self</span><span class="o">.</span><span class="n">composition</span><span class="p">[</span><span class="n">i</span><span class="p">]</span><span class="o">.</span><span class="n">chemical_system_sorted</span><span class="p">(</span><span class="n">separater</span><span class="o">=</span><span class="s2">&quot;-&quot;</span><span class="p">))</span>
+                        <span class="k">for</span> <span class="n">i</span><span class="p">,</span> <span class="n">formula</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">formula</span><span class="p">)],</span> <span class="n">columns</span><span class="o">=</span><span class="p">[</span><span class="s2">&quot;phase&quot;</span><span class="p">,</span> <span class="s2">&quot;energy_per_formula&quot;</span><span class="p">,</span> <span class="s2">&quot;energy_per_atom&quot;</span><span class="p">,</span>
+                                                                             <span class="s2">&quot;chemsys&quot;</span><span class="p">])</span>
+        <span class="n">df</span><span class="p">[</span><span class="s2">&quot;energy_per_formula&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">df</span><span class="p">[</span><span class="s2">&quot;energy_per_formula&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">round</span><span class="p">(</span><span class="n">decimals</span><span class="o">=</span><span class="n">decimtol</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">df</span></div></div>
+
+
+<div class="viewcode-block" id="Species"><a class="viewcode-back" href="../Compositions.html#Compositions.Species">[docs]</a><span class="k">class</span> <span class="nc">Species</span><span class="p">(</span><span class="n">CoreSpecies</span><span class="p">):</span>
+
+    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span>
+                 <span class="n">formulas</span><span class="p">:</span> <span class="nb">list</span> <span class="ow">or</span> <span class="nb">tuple</span><span class="p">,</span>
+                 <span class="n">asedb</span><span class="p">:</span> <span class="nb">str</span> <span class="ow">or</span> <span class="n">dBcore</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+                 <span class="n">establish_mongo</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span>
+                 <span class="n">host</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s2">&quot;localhost&quot;</span><span class="p">,</span>
+                 <span class="n">port</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">2707</span><span class="p">,</span>
+                 <span class="n">database</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+                 <span class="n">client</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+                 <span class="n">collection_name</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+                 <span class="n">verbosity</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">1</span><span class="p">,</span> <span class="p">):</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">_asedb</span> <span class="o">=</span> <span class="kc">None</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_database</span> <span class="o">=</span> <span class="kc">None</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_entries</span> <span class="o">=</span> <span class="kc">None</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_rows</span> <span class="o">=</span> <span class="kc">None</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">verbosity</span> <span class="o">=</span> <span class="n">verbosity</span>
+
+        <span class="nb">super</span><span class="p">(</span><span class="n">Species</span><span class="p">,</span> <span class="bp">self</span><span class="p">)</span><span class="o">.</span><span class="fm">__init__</span><span class="p">(</span><span class="n">formulas</span><span class="o">=</span><span class="n">formulas</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">asedb</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">asedb</span> <span class="o">=</span> <span class="n">asedb</span>
+
+        <span class="k">if</span> <span class="n">establish_mongo</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">connect_mongo</span><span class="p">(</span><span class="n">host</span><span class="o">=</span><span class="n">host</span><span class="p">,</span>
+                               <span class="n">port</span><span class="o">=</span><span class="n">port</span><span class="p">,</span>
+                               <span class="n">database</span><span class="o">=</span><span class="n">database</span><span class="p">,</span>
+                               <span class="n">client</span><span class="o">=</span><span class="n">client</span><span class="p">,</span>
+                               <span class="n">collection_name</span><span class="o">=</span><span class="n">collection_name</span><span class="p">)</span>
+
+
+
+    <span class="nd">@property</span>
+    <span class="k">def</span> <span class="nf">asedb</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_asedb</span>
+
+    <span class="nd">@asedb</span><span class="o">.</span><span class="n">setter</span>
+    <span class="k">def</span> <span class="nf">asedb</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">db</span><span class="p">:</span> <span class="n">dBcore</span> <span class="ow">or</span> <span class="nb">str</span><span class="p">):</span>
+        <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">db</span><span class="p">,</span> <span class="p">(</span><span class="n">dBcore</span><span class="p">,</span> <span class="nb">str</span><span class="p">)):</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_asedb</span> <span class="o">=</span> <span class="n">SearcherdB</span><span class="p">(</span><span class="n">db</span><span class="o">=</span><span class="n">db</span><span class="p">,</span> <span class="n">verbosity</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">verbosity</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;Expected &#39;</span><span class="si">{}</span><span class="s2">&#39; or &#39;</span><span class="si">{}</span><span class="s2">&#39; type, but got </span><span class="si">{}</span><span class="s2"> &quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="nb">str</span><span class="p">,</span> <span class="n">dBcore</span><span class="p">,</span> <span class="nb">type</span><span class="p">(</span><span class="n">db</span><span class="p">)))</span>
+
+    <span class="nd">@property</span>
+    <span class="k">def</span> <span class="nf">database</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_database</span>
+
+    <span class="nd">@database</span><span class="o">.</span><span class="n">setter</span>
+    <span class="k">def</span> <span class="nf">database</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">value</span><span class="p">):</span>
+        <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">value</span><span class="p">,</span> <span class="n">Search_Engine</span><span class="p">):</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_database</span> <span class="o">=</span> <span class="n">value</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;Invalid type &#39;</span><span class="si">{}</span><span class="s2">&#39; of value, expected </span><span class="si">{}</span><span class="s2">&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="nb">type</span><span class="p">(</span><span class="n">value</span><span class="p">),</span> <span class="n">Search_Engine</span><span class="p">))</span>
+
+    <span class="nd">@property</span>
+    <span class="k">def</span> <span class="nf">rows</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_rows</span>
+
+    <span class="nd">@property</span>
+    <span class="k">def</span> <span class="nf">entries</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_entries</span>
+
+<div class="viewcode-block" id="Species.connect_mongo"><a class="viewcode-back" href="../Compositions.html#Compositions.Species.connect_mongo">[docs]</a>    <span class="k">def</span> <span class="nf">connect_mongo</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span>
+                      <span class="n">host</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s2">&quot;localhost&quot;</span><span class="p">,</span>
+                      <span class="n">port</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">2707</span><span class="p">,</span>
+                      <span class="n">database</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+                      <span class="n">client</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+                      <span class="n">collection_name</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="kc">None</span>
+                      <span class="p">):</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">_database</span> <span class="o">=</span> <span class="n">Search_Engine</span><span class="p">(</span><span class="n">host</span><span class="o">=</span><span class="n">host</span><span class="p">,</span>
+                                       <span class="n">port</span><span class="o">=</span><span class="n">port</span><span class="p">,</span>
+                                       <span class="n">database</span><span class="o">=</span><span class="n">database</span><span class="p">,</span>
+                                       <span class="n">client</span><span class="o">=</span><span class="n">client</span><span class="p">,</span>
+                                       <span class="n">collection_name</span><span class="o">=</span><span class="n">collection_name</span><span class="p">)</span></div>
+
+<div class="viewcode-block" id="Species.search_in_asedb"><a class="viewcode-back" href="../Compositions.html#Compositions.Species.search_in_asedb">[docs]</a>    <span class="k">def</span> <span class="nf">search_in_asedb</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">asedb</span><span class="p">:</span> <span class="nb">str</span> <span class="ow">or</span> <span class="n">dBcore</span> <span class="o">=</span> <span class="kc">None</span><span class="p">):</span>
+        <span class="k">if</span> <span class="n">asedb</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">asedb</span> <span class="o">=</span> <span class="n">asedb</span>
+
+        <span class="n">rowsdict</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">asedb</span><span class="o">.</span><span class="n">get_formulas</span><span class="p">(</span><span class="n">formulas</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">formula</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">rowsdict</span></div>
+
+<div class="viewcode-block" id="Species.set_rows"><a class="viewcode-back" href="../Compositions.html#Compositions.Species.set_rows">[docs]</a>    <span class="k">def</span> <span class="nf">set_rows</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">rowsdict</span><span class="p">:</span> <span class="nb">dict</span><span class="p">):</span>
+        <span class="n">rrows</span> <span class="o">=</span> <span class="p">[]</span>
+
+        <span class="k">for</span> <span class="n">i</span><span class="p">,</span> <span class="n">f</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">formula</span><span class="p">):</span>
+            <span class="n">row</span> <span class="o">=</span> <span class="n">rowsdict</span><span class="p">[</span><span class="n">f</span><span class="p">]</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">composition</span><span class="p">[</span><span class="n">i</span><span class="p">]</span><span class="o">.</span><span class="n">row</span> <span class="o">=</span> <span class="n">row</span>
+            <span class="n">rrows</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">composition</span><span class="p">[</span><span class="n">i</span><span class="p">]</span><span class="o">.</span><span class="n">row</span><span class="p">)</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">_rows</span> <span class="o">=</span> <span class="n">rrows</span>  <span class="c1"># redudant .. remove this in future</span></div>
+
+<div class="viewcode-block" id="Species.set_entries"><a class="viewcode-back" href="../Compositions.html#Compositions.Species.set_entries">[docs]</a>    <span class="k">def</span> <span class="nf">set_entries</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">entrydict</span><span class="p">:</span> <span class="nb">dict</span><span class="p">):</span>
+        <span class="n">entries</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="k">for</span> <span class="n">i</span><span class="p">,</span> <span class="n">f</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">formula</span><span class="p">):</span>
+            <span class="n">entry</span> <span class="o">=</span> <span class="n">entrydict</span><span class="p">[</span><span class="n">f</span><span class="p">]</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">composition</span><span class="p">[</span><span class="n">i</span><span class="p">]</span><span class="o">.</span><span class="n">entry</span> <span class="o">=</span> <span class="n">entry</span>
+            <span class="n">entries</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">composition</span><span class="p">[</span><span class="n">i</span><span class="p">]</span><span class="o">.</span><span class="n">entry</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_entries</span> <span class="o">=</span> <span class="n">entries</span></div>
+
+<div class="viewcode-block" id="Species.search_in_mpdb"><a class="viewcode-back" href="../Compositions.html#Compositions.Species.search_in_mpdb">[docs]</a>    <span class="k">def</span> <span class="nf">search_in_mpdb</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">sort_by_e_above_hull</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">True</span><span class="p">):</span>
+        <span class="k">assert</span> <span class="bp">self</span><span class="o">.</span><span class="n">database</span>
+        <span class="n">entries</span> <span class="o">=</span> <span class="p">{}</span>
+        <span class="k">for</span> <span class="n">f</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">formula</span><span class="p">:</span>
+            <span class="n">entries</span><span class="p">[</span><span class="n">f</span><span class="p">]</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">database</span><span class="o">.</span><span class="n">get_entries_formula</span><span class="p">(</span><span class="n">f</span><span class="p">,</span> <span class="n">sort_by_e_above_hull</span><span class="o">=</span><span class="n">sort_by_e_above_hull</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">entries</span></div>
+
+<div class="viewcode-block" id="Species.search_in_online_mp"><a class="viewcode-back" href="../Compositions.html#Compositions.Species.search_in_online_mp">[docs]</a>    <span class="k">def</span> <span class="nf">search_in_online_mp</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">mpkey</span><span class="p">,</span>
+                            <span class="n">sort_by_e_above_hull</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">True</span><span class="p">,</span>
+                            <span class="n">property_data</span><span class="o">=</span><span class="p">[</span><span class="s2">&quot;formation_energy_per_atom&quot;</span><span class="p">,</span> <span class="s2">&quot;spacegroup&quot;</span><span class="p">,</span> <span class="s2">&quot;e_above_hull&quot;</span><span class="p">],</span>
+                            <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
+        <span class="n">smp</span> <span class="o">=</span> <span class="n">SmartMPRester</span><span class="p">(</span><span class="n">mpkey</span><span class="o">=</span><span class="n">mpkey</span><span class="p">)</span>
+        <span class="n">Entries</span> <span class="o">=</span> <span class="p">{}</span>
+        <span class="k">for</span> <span class="n">formula</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">formula</span><span class="p">:</span>
+            <span class="n">entries</span> <span class="o">=</span> <span class="n">smp</span><span class="o">.</span><span class="n">get_entries</span><span class="p">(</span><span class="n">formula</span><span class="p">,</span> <span class="n">property_data</span><span class="o">=</span><span class="n">property_data</span><span class="p">,</span> <span class="n">sort_by_e_above_hull</span><span class="o">=</span><span class="n">sort_by_e_above_hull</span><span class="p">,</span>
+                                      <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
+            <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">verbosity</span> <span class="o">&gt;=</span> <span class="mi">1</span><span class="p">:</span>
+                <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;Found entries for formula: </span><span class="si">{}</span><span class="se">\n</span><span class="si">{}</span><span class="s2">&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">formula</span><span class="p">,</span> <span class="n">entries</span><span class="p">))</span>
+            <span class="n">Entries</span><span class="p">[</span><span class="n">formula</span><span class="p">]</span> <span class="o">=</span> <span class="n">entries</span>
+
+        <span class="k">return</span> <span class="n">Entries</span></div>
+
+<div class="viewcode-block" id="Species.search_chemical_system_asedb"><a class="viewcode-back" href="../Compositions.html#Compositions.Species.search_chemical_system_asedb">[docs]</a>    <span class="k">def</span> <span class="nf">search_chemical_system_asedb</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">db</span><span class="p">:</span><span class="n">dBcore</span> <span class="ow">or</span> <span class="nb">str</span><span class="p">,</span> <span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
+        <span class="n">db</span>  <span class="o">=</span><span class="n">SearcherdB</span><span class="p">(</span><span class="n">db</span><span class="o">=</span><span class="n">db</span><span class="p">,</span> <span class="n">verbosity</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">verbosity</span><span class="p">)</span>
+        <span class="n">Rows</span> <span class="o">=</span> <span class="p">{}</span>
+        <span class="k">for</span> <span class="n">i</span><span class="p">,</span><span class="n">f</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">formula</span><span class="p">):</span>
+            <span class="n">chemsys</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">composition</span><span class="p">[</span><span class="n">i</span><span class="p">]</span><span class="o">.</span><span class="n">chemical_system_sorted</span><span class="p">(</span><span class="n">separater</span><span class="o">=</span><span class="s2">&quot;,&quot;</span><span class="p">)</span>
+            <span class="n">Rows</span><span class="p">[</span><span class="n">f</span><span class="p">]</span> <span class="o">=</span> <span class="nb">list</span><span class="p">(</span><span class="n">db</span><span class="o">.</span><span class="n">gen_rows</span><span class="p">(</span><span class="n">chemsys</span><span class="p">,</span> <span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">))</span>
+
+        <span class="k">return</span> <span class="n">Rows</span></div>
+
+<div class="viewcode-block" id="Species.search_chemical_systems_asedblst"><a class="viewcode-back" href="../Compositions.html#Compositions.Species.search_chemical_systems_asedblst">[docs]</a>    <span class="k">def</span> <span class="nf">search_chemical_systems_asedblst</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">db_lst</span><span class="p">:[</span><span class="n">dBcore</span> <span class="ow">or</span> <span class="nb">str</span><span class="p">],</span> <span class="n">args</span><span class="o">=</span><span class="p">(),</span> <span class="n">kwargs</span><span class="o">=</span><span class="p">()):</span>
+
+        <span class="k">if</span> <span class="ow">not</span> <span class="n">kwargs</span><span class="p">:</span>
+            <span class="n">kwargs</span> <span class="o">=</span> <span class="p">[</span><span class="nb">dict</span><span class="p">()]</span><span class="o">*</span><span class="nb">len</span><span class="p">(</span><span class="n">db_lst</span><span class="p">)</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="n">args</span><span class="p">:</span>
+            <span class="n">args</span> <span class="o">=</span> <span class="p">[()]</span><span class="o">*</span><span class="nb">len</span><span class="p">(</span><span class="n">db_lst</span><span class="p">)</span>
+
+        <span class="n">All_rows</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="k">for</span> <span class="n">i</span><span class="p">,</span> <span class="n">db</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">db_lst</span><span class="p">):</span>
+            <span class="n">rows</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">search_chemical_system_asedb</span><span class="p">(</span><span class="n">db</span><span class="p">,</span> <span class="o">*</span><span class="n">args</span><span class="p">[</span><span class="n">i</span><span class="p">],</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">[</span><span class="n">i</span><span class="p">])</span>
+            <span class="n">All_rows</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">rows</span><span class="p">)</span>
+
+        <span class="n">Rows</span> <span class="o">=</span> <span class="p">{</span><span class="n">f</span><span class="p">:</span> <span class="p">[</span><span class="n">row</span> <span class="k">for</span> <span class="n">rows</span> <span class="ow">in</span> <span class="n">All_rows</span> <span class="k">for</span> <span class="n">row</span> <span class="ow">in</span> <span class="n">rows</span><span class="p">[</span><span class="n">f</span><span class="p">]]</span> <span class="k">for</span> <span class="n">f</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">formula</span><span class="p">}</span>
+
+        <span class="k">return</span> <span class="n">Rows</span></div>
+
+<div class="viewcode-block" id="Species.search_permute_chemical_sytems_asedb"><a class="viewcode-back" href="../Compositions.html#Compositions.Species.search_permute_chemical_sytems_asedb">[docs]</a>    <span class="k">def</span> <span class="nf">search_permute_chemical_sytems_asedb</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">db</span><span class="p">:</span> <span class="n">dBcore</span> <span class="ow">or</span> <span class="nb">str</span><span class="p">,</span> <span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
+        <span class="n">db</span> <span class="o">=</span> <span class="n">SearcherdB</span><span class="p">(</span><span class="n">db</span><span class="o">=</span><span class="n">db</span><span class="p">,</span> <span class="n">verbosity</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">verbosity</span><span class="p">)</span>
+        <span class="n">Rows</span> <span class="o">=</span> <span class="p">{}</span>
+        <span class="n">chemsys_generator</span> <span class="o">=</span> <span class="n">Genchemicalsystems</span><span class="p">(</span><span class="n">separator</span><span class="o">=</span><span class="s2">&quot;,&quot;</span><span class="p">)</span>
+        <span class="k">for</span> <span class="n">i</span><span class="p">,</span> <span class="n">f</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">formula</span><span class="p">):</span>
+            <span class="n">csys</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">composition</span><span class="p">[</span><span class="n">i</span><span class="p">]</span><span class="o">.</span><span class="n">chemical_system</span>
+            <span class="n">els</span> <span class="o">=</span> <span class="nb">sorted</span><span class="p">(</span><span class="n">csys</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s2">&quot;-&quot;</span><span class="p">))</span>
+
+            <span class="n">chemsys_generator</span><span class="o">.</span><span class="n">elements</span> <span class="o">=</span> <span class="n">els</span>
+            <span class="nb">print</span><span class="p">(</span><span class="n">els</span><span class="p">)</span>
+            <span class="n">rrows</span> <span class="o">=</span> <span class="p">[]</span>
+            <span class="n">uqid</span> <span class="o">=</span> <span class="p">[]</span>
+
+            <span class="k">for</span> <span class="n">chemsys</span> <span class="ow">in</span> <span class="n">chemsys_generator</span><span class="o">.</span><span class="n">unique_combinations_sizes</span><span class="p">(</span><span class="n">sizes</span><span class="o">=</span><span class="nb">list</span><span class="p">(</span><span class="nb">range</span><span class="p">(</span><span class="mi">2</span><span class="p">,</span> <span class="nb">len</span><span class="p">(</span><span class="n">els</span><span class="p">)</span><span class="o">+</span><span class="mi">1</span><span class="p">))):</span>
+                <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;Chemsys looking:&quot;</span><span class="p">,</span><span class="n">chemsys</span><span class="p">)</span>
+                <span class="k">for</span> <span class="n">row</span> <span class="ow">in</span> <span class="n">db</span><span class="o">.</span><span class="n">gen_rows</span><span class="p">(</span><span class="n">chemsys</span><span class="p">,</span> <span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
+                    <span class="k">if</span> <span class="n">row</span><span class="o">.</span><span class="n">unique_id</span> <span class="ow">in</span> <span class="n">uqid</span><span class="p">:</span>
+                        <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;Row matched existed already, skipping&quot;</span><span class="p">)</span>
+                        <span class="k">continue</span>
+
+                    <span class="k">if</span> <span class="s2">&quot;,&quot;</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="nb">sorted</span><span class="p">(</span><span class="n">Composition</span><span class="p">(</span><span class="n">row</span><span class="o">.</span><span class="n">formula</span><span class="p">)</span><span class="o">.</span><span class="n">chemical_system</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s2">&quot;-&quot;</span><span class="p">)))</span> <span class="ow">in</span> <span class="n">chemsys</span> <span class="p">:</span>
+                        <span class="n">rrows</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">row</span><span class="p">)</span>
+                        <span class="n">uqid</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">row</span><span class="o">.</span><span class="n">unique_id</span><span class="p">)</span>
+
+            <span class="n">Rows</span><span class="p">[</span><span class="n">f</span><span class="p">]</span> <span class="o">=</span> <span class="n">rrows</span>
+            <span class="c1"># Rows[f] = [row for chemsys in chemsys_generator.unique_combinations_sizes(sizes=list(range(2, len(els))))</span>
+            <span class="c1">#           for row in db.gen_rows(chemsys, *args, **kwargs)</span>
+            <span class="c1">#           ]</span>
+
+        <span class="k">return</span> <span class="n">Rows</span></div>
+
+<div class="viewcode-block" id="Species.from_aserows"><a class="viewcode-back" href="../Compositions.html#Compositions.Species.from_aserows">[docs]</a>    <span class="nd">@staticmethod</span>
+    <span class="k">def</span> <span class="nf">from_aserows</span><span class="p">(</span><span class="n">rowlst</span><span class="p">:</span> <span class="nb">list</span><span class="p">):</span>
+        <span class="n">formulas</span> <span class="o">=</span> <span class="p">[</span><span class="n">Composition</span><span class="p">(</span><span class="n">r</span><span class="o">.</span><span class="n">formula</span><span class="p">)</span><span class="o">.</span><span class="n">reduced_formula</span> <span class="k">for</span> <span class="n">r</span> <span class="ow">in</span> <span class="n">rowlst</span><span class="p">]</span>
+        <span class="n">species</span> <span class="o">=</span> <span class="n">Species</span><span class="p">(</span><span class="n">formulas</span><span class="o">=</span><span class="n">formulas</span><span class="p">)</span>
+        <span class="n">species</span><span class="o">.</span><span class="n">set_rows</span><span class="p">(</span><span class="nb">dict</span><span class="p">([(</span><span class="n">f</span><span class="p">,</span> <span class="n">r</span><span class="p">)</span> <span class="k">for</span> <span class="n">f</span><span class="p">,</span> <span class="n">r</span> <span class="ow">in</span> <span class="nb">zip</span><span class="p">(</span><span class="n">formulas</span><span class="p">,</span> <span class="n">rowlst</span><span class="p">)]))</span>
+        <span class="k">return</span> <span class="n">species</span></div>
+
+<div class="viewcode-block" id="Species.to_dataframe_entries"><a class="viewcode-back" href="../Compositions.html#Compositions.Species.to_dataframe_entries">[docs]</a>    <span class="k">def</span> <span class="nf">to_dataframe_entries</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">decimtol</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">6</span><span class="p">):</span>
+        <span class="n">df</span> <span class="o">=</span> <span class="n">DataFrame</span><span class="p">([(</span><span class="bp">self</span><span class="o">.</span><span class="n">formula</span><span class="p">[</span><span class="n">i</span><span class="p">],</span> <span class="n">entry</span><span class="o">.</span><span class="n">entry</span><span class="o">.</span><span class="n">entry_id</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">composition</span><span class="p">[</span><span class="n">i</span><span class="p">]</span><span class="o">.</span><span class="n">chemical_system_sorted</span><span class="p">(</span><span class="s2">&quot;-&quot;</span><span class="p">),</span>
+                         <span class="n">entry</span><span class="o">.</span><span class="n">data</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;e_above_hull&quot;</span><span class="p">,</span> <span class="kc">None</span><span class="p">),</span>
+                         <span class="n">entry</span><span class="o">.</span><span class="n">entry</span><span class="o">.</span><span class="n">correction_per_atom</span><span class="p">,</span>
+                         <span class="nb">round</span><span class="p">(</span><span class="n">entry</span><span class="o">.</span><span class="n">entry</span><span class="o">.</span><span class="n">uncorrected_energy_per_atom</span> <span class="o">*</span> <span class="n">entry</span><span class="o">.</span><span class="n">composition</span><span class="o">.</span><span class="n">reduced_composition</span><span class="o">.</span><span class="n">num_atoms</span><span class="p">,</span> <span class="n">decimtol</span> <span class="p">),</span>
+                         <span class="nb">round</span><span class="p">(</span><span class="n">entry</span><span class="o">.</span><span class="n">entry</span><span class="o">.</span><span class="n">uncorrected_energy_per_atom</span><span class="p">,</span> <span class="n">decimtol</span><span class="p">),</span>
+                         <span class="n">entry</span><span class="o">.</span><span class="n">data</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;spacegroup&quot;</span><span class="p">,</span> <span class="kc">None</span><span class="p">)</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;symbol&quot;</span><span class="p">,</span> <span class="kc">None</span><span class="p">)</span> <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">entry</span><span class="o">.</span><span class="n">data</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;spacegroup&quot;</span><span class="p">),</span> <span class="nb">dict</span><span class="p">)</span>
+                         <span class="k">else</span> <span class="kc">None</span><span class="p">,</span>
+                         <span class="n">entry</span><span class="o">.</span><span class="n">data</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;formation_energy_per_atom&quot;</span><span class="p">,</span> <span class="kc">None</span><span class="p">))</span>
+                        <span class="k">for</span> <span class="n">i</span><span class="p">,</span> <span class="n">entry</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">entries</span><span class="p">)],</span>
+                       <span class="n">columns</span> <span class="o">=</span> <span class="p">[</span><span class="s2">&quot;phase&quot;</span><span class="p">,</span> <span class="s2">&quot;mp-id&quot;</span><span class="p">,</span> <span class="s2">&quot;chemsys&quot;</span><span class="p">,</span> <span class="s2">&quot;e_above_hull&quot;</span><span class="p">,</span> <span class="s2">&quot;correction_per_atom&quot;</span><span class="p">,</span>
+                                  <span class="s2">&quot;uncorr_total_energy_per_formula&quot;</span><span class="p">,</span> <span class="s2">&quot;uncorr_total_energy_per_atom&quot;</span><span class="p">,</span>
+                                   <span class="s2">&quot;spacegroup&quot;</span><span class="p">,</span> <span class="s2">&quot;corr_formation_energy_per_atom&quot;</span><span class="p">])</span>
+
+        <span class="k">return</span> <span class="n">df</span></div></div>
+
+
+
+<div class="viewcode-block" id="Elements"><a class="viewcode-back" href="../Compositions.html#Compositions.Elements">[docs]</a><span class="k">class</span> <span class="nc">Elements</span><span class="p">(</span><span class="n">Species</span><span class="p">):</span>
+
+    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span>
+                 <span class="n">elements</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">,</span>
+                 <span class="n">sort</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">):</span>
+        <span class="nb">super</span><span class="p">(</span><span class="n">Elements</span><span class="p">,</span> <span class="bp">self</span><span class="p">)</span><span class="o">.</span><span class="fm">__init__</span><span class="p">(</span><span class="n">formulas</span><span class="o">=</span><span class="n">elements</span><span class="p">,</span> <span class="n">establish_mongo</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
+        <span class="k">assert</span> <span class="bp">self</span><span class="o">.</span><span class="n">_els_check</span><span class="p">()</span>
+        <span class="k">if</span> <span class="n">sort</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">formula</span><span class="o">.</span><span class="n">sort</span><span class="p">()</span>
+
+    <span class="nd">@property</span>
+    <span class="k">def</span> <span class="nf">els</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_formula</span>
+
+    <span class="k">def</span> <span class="fm">__setitem__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">key</span><span class="p">,</span> <span class="n">value</span><span class="p">):</span>
+        <span class="n">value</span> <span class="o">=</span> <span class="n">CoreSpecie</span><span class="p">(</span><span class="n">value</span><span class="p">)</span>
+        <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">key</span><span class="p">,</span> <span class="nb">int</span><span class="p">):</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_composition</span><span class="p">[</span><span class="n">key</span><span class="p">]</span> <span class="o">=</span> <span class="n">value</span>
+            <span class="k">return</span>
+
+        <span class="n">index</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_find_index_name</span><span class="p">(</span><span class="n">name</span><span class="o">=</span><span class="n">key</span><span class="p">)</span>
+        <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">index</span><span class="p">)</span> <span class="o">&gt;</span> <span class="mi">1</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;Can only set a single Corespecie, instead of multiple Species&quot;</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_composition</span><span class="p">[</span><span class="n">index</span><span class="p">[</span><span class="mi">0</span><span class="p">]]</span> <span class="o">=</span> <span class="n">value</span>
+
+    <span class="k">def</span> <span class="fm">__repr__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="n">sst</span> <span class="o">=</span> <span class="p">[</span><span class="s2">&quot;elements=</span><span class="si">{}</span><span class="s2">&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">els</span><span class="p">)]</span>
+        <span class="k">return</span> <span class="s2">&quot;</span><span class="si">{0}</span><span class="s2">(</span><span class="si">{1}</span><span class="s2">)&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">Elements</span><span class="o">.</span><span class="vm">__name__</span><span class="p">,</span> <span class="s2">&quot;,&quot;</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">sst</span><span class="p">))</span>
+
+    <span class="k">def</span> <span class="fm">__str__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="fm">__repr__</span><span class="p">()</span>
+
+    <span class="k">def</span> <span class="nf">_els_check</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">return</span> <span class="nb">all</span><span class="p">([</span><span class="kc">True</span> <span class="k">if</span> <span class="n">Elts</span><span class="p">[</span><span class="n">i</span><span class="p">]</span> <span class="k">else</span> <span class="kc">False</span> <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">els</span><span class="p">])</span>
+
+<div class="viewcode-block" id="Elements.unique_els"><a class="viewcode-back" href="../Compositions.html#Compositions.Elements.unique_els">[docs]</a>    <span class="k">def</span> <span class="nf">unique_els</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">return</span> <span class="n">np</span><span class="o">.</span><span class="n">unique</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">els</span><span class="p">)</span></div>
+
+<div class="viewcode-block" id="Elements.from_formula"><a class="viewcode-back" href="../Compositions.html#Compositions.Elements.from_formula">[docs]</a>    <span class="nd">@staticmethod</span>
+    <span class="k">def</span> <span class="nf">from_formula</span><span class="p">(</span><span class="n">formula</span><span class="p">):</span>
+        <span class="n">elements</span> <span class="o">=</span> <span class="n">re</span><span class="o">.</span><span class="n">findall</span><span class="p">(</span><span class="s2">&quot;[A-Z][a-z]?&quot;</span><span class="p">,</span> <span class="n">formula</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">Elements</span><span class="p">(</span><span class="n">elements</span><span class="p">)</span></div></div>
+
+
+<div class="viewcode-block" id="Genchemicalsystems"><a class="viewcode-back" href="../Compositions.html#Compositions.Genchemicalsystems">[docs]</a><span class="k">class</span> <span class="nc">Genchemicalsystems</span><span class="p">:</span>
+
+    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">elements</span><span class="p">:</span> <span class="nb">list</span> <span class="ow">or</span> <span class="nb">tuple</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span> <span class="n">separator</span><span class="p">:</span><span class="nb">str</span><span class="o">=</span><span class="s2">&quot;-&quot;</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">elements</span> <span class="o">=</span> <span class="n">elements</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">separator</span> <span class="o">=</span> <span class="n">separator</span>
+
+<div class="viewcode-block" id="Genchemicalsystems.combinations"><a class="viewcode-back" href="../Compositions.html#Compositions.Genchemicalsystems.combinations">[docs]</a>    <span class="k">def</span> <span class="nf">combinations</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">size</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">2</span><span class="p">,</span> <span class="p">):</span>
+        <span class="n">maxcomb</span> <span class="o">=</span> <span class="n">itcombinations</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">elements</span><span class="p">,</span> <span class="n">size</span><span class="p">)</span>
+        <span class="k">for</span> <span class="n">comb</span> <span class="ow">in</span> <span class="n">maxcomb</span><span class="p">:</span>
+            <span class="n">ss</span> <span class="o">=</span> <span class="p">[</span><span class="s2">&quot;</span><span class="si">{}</span><span class="s2">&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">c</span><span class="p">)</span> <span class="k">for</span> <span class="n">c</span> <span class="ow">in</span> <span class="n">comb</span><span class="p">]</span>
+            <span class="n">ss</span> <span class="o">=</span> <span class="s2">&quot;</span><span class="si">{}</span><span class="s2">&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">separator</span><span class="p">)</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">ss</span><span class="p">)</span>
+            <span class="k">yield</span> <span class="n">ss</span></div>
+
+<div class="viewcode-block" id="Genchemicalsystems.sorted_combinations"><a class="viewcode-back" href="../Compositions.html#Compositions.Genchemicalsystems.sorted_combinations">[docs]</a>    <span class="k">def</span> <span class="nf">sorted_combinations</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">size</span><span class="p">:</span> <span class="nb">int</span><span class="o">=</span><span class="mi">2</span><span class="p">,):</span>
+        <span class="k">for</span> <span class="n">comb</span> <span class="ow">in</span> <span class="n">itcombinations</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">elements</span><span class="p">,</span> <span class="n">size</span><span class="p">):</span>
+            <span class="n">ss</span> <span class="o">=</span> <span class="nb">sorted</span><span class="p">(</span><span class="n">comb</span><span class="p">)</span>
+            <span class="n">ss</span> <span class="o">=</span> <span class="s2">&quot;</span><span class="si">{}</span><span class="s2">&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">separator</span><span class="p">)</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">ss</span><span class="p">)</span>
+            <span class="k">yield</span> <span class="n">ss</span></div>
+
+<div class="viewcode-block" id="Genchemicalsystems.combinations_sizes"><a class="viewcode-back" href="../Compositions.html#Compositions.Genchemicalsystems.combinations_sizes">[docs]</a>    <span class="k">def</span> <span class="nf">combinations_sizes</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">sizes</span><span class="p">:</span> <span class="nb">list</span> <span class="ow">or</span> <span class="nb">tuple</span><span class="p">,):</span>
+        <span class="k">for</span> <span class="n">size</span> <span class="ow">in</span> <span class="n">sizes</span><span class="p">:</span>
+            <span class="k">yield</span> <span class="bp">self</span><span class="o">.</span><span class="n">combinations</span><span class="p">(</span><span class="n">size</span><span class="o">=</span><span class="n">size</span><span class="p">)</span></div>
+
+<div class="viewcode-block" id="Genchemicalsystems.unique_combinations_sizes"><a class="viewcode-back" href="../Compositions.html#Compositions.Genchemicalsystems.unique_combinations_sizes">[docs]</a>    <span class="k">def</span> <span class="nf">unique_combinations_sizes</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">sizes</span><span class="p">:</span> <span class="nb">list</span> <span class="ow">or</span> <span class="nb">tuple</span><span class="p">,):</span>
+        <span class="k">return</span> <span class="nb">sorted</span><span class="p">({</span><span class="n">sis</span> <span class="k">for</span> <span class="n">sistem</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">combinations_sizes</span><span class="p">(</span><span class="n">sizes</span><span class="p">)</span> <span class="k">for</span> <span class="n">sis</span> <span class="ow">in</span> <span class="n">sistem</span><span class="p">})</span></div>
+
+<div class="viewcode-block" id="Genchemicalsystems.sorted_unique_combinations_sizes"><a class="viewcode-back" href="../Compositions.html#Compositions.Genchemicalsystems.sorted_unique_combinations_sizes">[docs]</a>    <span class="k">def</span> <span class="nf">sorted_unique_combinations_sizes</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">sizes</span><span class="p">:</span> <span class="nb">list</span> <span class="ow">or</span> <span class="nb">tuple</span><span class="p">):</span>
+        <span class="k">return</span> <span class="nb">sorted</span><span class="p">({</span><span class="n">sistem</span> <span class="k">for</span> <span class="n">size</span> <span class="ow">in</span> <span class="n">sizes</span> <span class="k">for</span> <span class="n">sistem</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">sorted_combinations</span><span class="p">(</span><span class="n">size</span><span class="p">)})</span></div>
+
+<div class="viewcode-block" id="Genchemicalsystems.gen_unique_sorted_possible_combinations"><a class="viewcode-back" href="../Compositions.html#Compositions.Genchemicalsystems.gen_unique_sorted_possible_combinations">[docs]</a>    <span class="k">def</span> <span class="nf">gen_unique_sorted_possible_combinations</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="n">sizes</span> <span class="o">=</span> <span class="p">[</span><span class="n">i</span> <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">2</span><span class="p">,</span> <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">elements</span><span class="p">)</span><span class="o">+</span><span class="mi">1</span><span class="p">)]</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">sorted_unique_combinations_sizes</span><span class="p">(</span><span class="n">sizes</span><span class="o">=</span><span class="n">sizes</span><span class="p">)</span></div>
+
+<div class="viewcode-block" id="Genchemicalsystems.gen_unique_possible_combinations"><a class="viewcode-back" href="../Compositions.html#Compositions.Genchemicalsystems.gen_unique_possible_combinations">[docs]</a>    <span class="k">def</span> <span class="nf">gen_unique_possible_combinations</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="n">sizes</span> <span class="o">=</span> <span class="p">[</span><span class="n">i</span> <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">2</span><span class="p">,</span> <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">elements</span><span class="p">)</span><span class="o">+</span><span class="mi">1</span><span class="p">)]</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">unique_combinations_sizes</span><span class="p">(</span><span class="n">sizes</span><span class="o">=</span><span class="n">sizes</span><span class="p">)</span></div></div>
+
+</pre></div>
+
+           </div>
+          </div>
+          <footer>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright 2023, Ali Muhammad Malik.</p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>

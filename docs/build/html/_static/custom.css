@@ -1,0 +1,14 @@
+
+.wy-nav-content {
+    max-width: 90%;
+}
+
+.rst-content div[class^=highlight] pre {
+    font-size: 14px;
+
+}
+
+.highlight pre {
+
+    font-size: 14px;
+}
