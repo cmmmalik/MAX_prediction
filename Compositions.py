@@ -222,6 +222,7 @@ class Species(CoreSpecies):
         self._database = None
         self._entries = None
         self._rows = None
+        self.verbosity = verbosity
 
         super(Species, self).__init__(formulas=formulas)
         if asedb:
@@ -234,7 +235,7 @@ class Species(CoreSpecies):
                                client=client,
                                collection_name=collection_name)
 
-        self.verbosity = verbosity
+
 
     @property
     def asedb(self):
@@ -336,7 +337,7 @@ class Species(CoreSpecies):
 
         return Rows
 
-    def Search_chemical_systems_asedblst(self, db_lst:[dBcore or str], args=(), kwargs=()):
+    def search_chemical_systems_asedblst(self, db_lst:[dBcore or str], args=(), kwargs=()):
 
         if not kwargs:
             kwargs = [dict()]*len(db_lst)
@@ -351,8 +352,6 @@ class Species(CoreSpecies):
         Rows = {f: [row for rows in All_rows for row in rows[f]] for f in self.formula}
 
         return Rows
-
-
 
     def search_permute_chemical_sytems_asedb(self, db: dBcore or str, *args, **kwargs):
         db = SearcherdB(db=db, verbosity=self.verbosity)
@@ -467,14 +466,27 @@ class Genchemicalsystems:
             ss = "{}".format(self.separator).join(ss)
             yield ss
 
+    def sorted_combinations(self, size: int=2,):
+        for comb in itcombinations(self.elements, size):
+            ss = sorted(comb)
+            ss = "{}".format(self.separator).join(ss)
+            yield ss
+
     def combinations_sizes(self, sizes: list or tuple,):
         for size in sizes:
             yield self.combinations(size=size)
 
     def unique_combinations_sizes(self, sizes: list or tuple,):
-        return sorted({ss for sistem in self.combinations_sizes(sizes) for ss in sistem})
+        return sorted({sis for sistem in self.combinations_sizes(sizes) for sis in sistem})
+
+    def sorted_unique_combinations_sizes(self, sizes: list or tuple):
+        return sorted({sistem for size in sizes for sistem in self.sorted_combinations(size)})
+
+    def gen_unique_sorted_possible_combinations(self):
+        sizes = [i for i in range(2, len(self.elements)+1)]
+        return self.sorted_unique_combinations_sizes(sizes=sizes)
 
     def gen_unique_possible_combinations(self):
-        sizes = [i for i in range(2, len(self.elements))]
+        sizes = [i for i in range(2, len(self.elements)+1)]
         return self.unique_combinations_sizes(sizes=sizes)
 

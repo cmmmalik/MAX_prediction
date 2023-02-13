@@ -37,7 +37,7 @@ class Search_Engine:
             self.collection = None
             self._collection_name = None
             return
-        assert self.db
+        assert self.db != None
         self.collection = self.db[value]
         self._collection_name = value
 
