@@ -5,7 +5,9 @@ from itertools import combinations as itcombinations
 
 import cohesive
 import numpy as np
-from MAX_prediction.Compositions import Genchemicalsystems, Elements, Species, CoreSpecie
+from MAX_prediction.core.species import Species, CoreSpecie
+from MAX_prediction.elements import Elements
+from MAX_prediction.utils import Genchemicalsystems
 from ase.db.core import Database as dBcore
 from chempy import balance_stoichiometry
 from colorama import Fore, Back, init
@@ -13,7 +15,7 @@ from mse.analysis.chemical_equations import equation_balancer_v1, Linearlydepend
 from mse.composition_utils import MAXcomp, EnhancedComposition as Pycomp
 from mse.ext.materials_project import SmartMPRester
 from pandas import DataFrame, notna, Series
-from pymatgen.core.composition import Composition  as Pymcomp
+from pymatgen.core.composition import Composition as Pymcomp
 
 init(autoreset=True)
 
@@ -167,7 +169,8 @@ class MAXSpecies(Species):
             if isinstance(row, (list, tuple)):
                 if len(row) > 1:
                     raise RuntimeError("Found more than one rows for a composition {}".format(f))
-                assert len(row) == 1
+                elif len(row) == 0:
+                    raise AssertionError("The row is empty for the formula(index) {}({})".format(f, i))
                 row = row[0]
             if self.verbosity >= 2:
                 print("Debug:")
@@ -180,6 +183,23 @@ class MAXSpecies(Species):
 
     def generate_unique_systems(self, sizes: list or tuple):
         return np.unique([specie.generate_unique_systems(sizes=sizes) for specie in self._composition])
+
+    def get_MXenes_formulas(self):
+        mxenes = []
+        for specie in self.composition:
+            Acomp = Pymcomp(specie.elementsmap["A"])
+            mxenecomp = (specie.composition - Acomp).iupac_formula.replace(" ", "")
+            mxenes.append(mxenecomp)
+        return mxenes
+
+    def get_dataframe(self, decimtol=6):
+        df = DataFrame(self.formula, columns=["phase"])
+        df["energy_per_formula"] = np.around(self.energies_per_formula, decimtol)
+        mapp = self.max_mapping
+        for i in ["M", "A", "X"]:
+            df[i] = [k[i] for k in mapp]
+        df["chemsys"] = self.chemicalsystems
+        return df
 
 
 class MAXAnalyzer(MAXSpecies):
@@ -992,7 +1012,6 @@ class MAXAnalyzer(MAXSpecies):
         #                           | (side_chemsys_series == els["X"])
         #                           | (side_chemsys_series == "-".join(sorted([els["A"], els["X"]])))]
 
-
         # for MAX phase only
         assert els["M"] and els["A"] and els["X"]
 
@@ -1055,6 +1074,7 @@ class MAXAnalyzer(MAXSpecies):
         :return:
         """
         Entries = {}
+
         if check_online:
             assert mpkey
             smp = SmartMPRester(mpkey=mpkey)
@@ -1417,30 +1437,43 @@ def get_combined_mpids(reaction_df: DataFrame, mpids_dct:dict, cols=None, verbos
 
 
 # generate the unique combinations of input phases
-def iter_combine_compounds(compounds: list, combinations: int, necessary=None):
+def iter_combine_compounds(compounds: list, combinations: int, necessary=None, subset=None):
     gen = itcombinations(compounds, combinations)
 
-    if necessary is None:
+    if necessary is None and subset is None:
         for comp in gen:
             yield comp
     else:
-        for comp in gen:
-            els = {e for com in comp for e in re.findall("[A-Z][a-z]?", com)}
-            els = list(els)
-            els.sort()
-            necessary = list(necessary)
-            necessary.sort()
-            #          cond = [i in "".join(comp) for i in necessary]
+        if necessary is not None:
+            necessary = set(necessary)
+            for comp in gen:
+                els = {e for com in comp for e in re.findall("[A-Z][a-z]?", com)}
+                # els = list(els)
+                # els.sort()
 
-            #           if not all(cond):
-            if necessary != els:
-                continue
-            yield comp
+                if necessary != els:
+                    continue
+
+                yield comp
+
+        elif subset is not None:
+            subset = set(subset)
+            for comp in gen:
+                els = {e for com in comp for e in re.findall("[A-Z][a-z]?", com)}
+                if els.issubset(subset) or els.issuperset(subset):
+                    yield comp
 
 
-def combine_compounds_multisize(compounds: list, combination_size: list, necessary=None):
+def combine_compounds_multisize(compounds: list, combination_size: list, necessary=None, subset=None):
+
+    if subset is not None:
+        assert not necessary
+
+    elif necessary is not None:
+        assert not subset
+
     for comb in combination_size:
-        for comps in iter_combine_compounds(compounds, combinations=comb, necessary=necessary):
+        for comps in iter_combine_compounds(compounds, combinations=comb, necessary=necessary, subset=subset):
             yield comps
 
 
