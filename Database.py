@@ -266,11 +266,20 @@ class SearcherdB:
                 rrows.append(row)
         return rrows
 
-    def get_formulas(self, formulas: list):
+    def get_formulas(self, formulas: list, **kwargs):
         fdict = {}
-        for f in formulas:
-            rrows = self.get_formula(f)
-            fdict[f] = rrows
+         
+         # do  not mix list and 
+        t_key = list(kwargs.keys())
+        if not isinstance(kwargs[t_key[0]], (tuple, list)):
+            for i,f in enumerate(formulas):
+                rrows = self.get_formula(f, **kwargs)
+                fdict[f] = rrows
+        else:
+            fdict = []
+            for i,f in enumerate(formulas):
+                rrows = self.get_formula(f, **{k:v[i] for k,v in kwargs.items()})
+                fdict.append(rrows)
         return fdict
 
 
