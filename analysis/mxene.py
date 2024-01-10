@@ -33,6 +33,18 @@ def copy_append_dict(dct: dict, newdct: dict):
     return {**dct, **newdct}
 
 
+def update_dict_assert(dct:dict, newdict:dict):
+    """Updating a dictionary (dct) with newdict, without avding any overwirting of key,value by explicitly asserting that
+    a key is absent in the dct. Will raise Assertion error if a key in newdict is present in dct."""
+
+    for k in newdict:
+        try:
+            assert k not in dct, f"{k} is already present in the dct"
+        except AssertionError as ex:
+            raise ex
+    dct.update(newdict)
+
+
 def append_dict1_dict2_exclusive(dict1, dict2, keys, exclude=[]):
     for key in keys:
         if key in dict1 or key in exclude:
