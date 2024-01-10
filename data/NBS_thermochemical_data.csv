@@ -1,0 +1,14 @@
+ # Oxygen,,,,,kJ/mol,,J/mol.K,
+Formula,State,Molar mass,deltafHf0°,deltafH°,deltafG°,H° – H0°,S°,Cp
+O2,g,31.9988,0,0,0,8.680,205.138,29.355
+,,,,,,,,
+# Hydrogen,,,,,,,,
+Formula,State,Molar mass,deltafHf0°,deltafH°,deltafG°,H° – H0°,S°,Cp
+H2,g,2.016,0,0,0,8.468,130.684,28.824
+H2O,l,18.0154,,-285.830,-237.129,13.293,69.91,75.291
+,,,,,,,,
+# Fluorine,,,,,,,,
+Formula,State,Molar mass,deltafHf0°,deltafH°,deltafG°,H° – H0°,S°,Cp
+F-,ao,18.9984,,-332.63,-278.79,,-13.8,-106.7
+F2,g,37.9968,0,0,0,8.82,202.78,31.3
+HF,ai,20.0064,,-332.63,-278.79,,-13.8,-106.7
