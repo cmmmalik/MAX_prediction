@@ -1409,6 +1409,8 @@ def calculate_total_energy_from_formation_energy(comp: str, en: float, elemental
     formation energy as -1 times formation energy. Therefore. Make sure that formation_energy being input is -1*actual_formation_energy
     of the phase.
     """
+    # Potential bug, if the formation 
+    warnings.warn("Make sure the formation energy, input (en) is -1*formation_energy of the phase", UserWarning)
 
     if isinstance(comp, str):
         comp = Pycomp(comp)
