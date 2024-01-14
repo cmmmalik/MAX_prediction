@@ -1405,6 +1405,11 @@ class MAXAnalyzer(MAXSpecies):
 
 
 def calculate_total_energy_from_formation_energy(comp: str, en: float, elemental_energies: dict):
+    """ This function calculates the total energy from the formation energy and the elemental energies. It expected the
+    formation energy as -1 times formation energy. Therefore. Make sure that formation_energy being input is -1*actual_formation_energy
+    of the phase.
+    """
+
     if isinstance(comp, str):
         comp = Pycomp(comp)
     energies = {el: elemental_energies[el] for el in comp.get_el_amt_dict().keys()}
