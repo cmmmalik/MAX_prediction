@@ -87,7 +87,17 @@ class MXeneBase:
                  competing_phases: Sidephases=None,
                  solution: Species=None,
                  parentmax:MAXSpecie = None,
-                 verbosity:int = 1):
+                 verbosity:int = 1,
+                 nproc:int=None):
+        """
+        Base class for MXene analyzers, not expected  to be used directly.
+        :param mxene:
+        :param competing_phases:
+        :param solution:
+        :param parentmax:
+        :param verbosity:(int, default 1) set the level of verbosity
+        :param nproc:(int, default None) number of processes for parallel evaluation of reactions balance.
+        """
 
         self._sol = None
         self._cp = None
