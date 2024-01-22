@@ -41,6 +41,10 @@ class CoreSpecie:
     def composition(self):
         return self._composition
 
+    @property
+    def num_atoms(self):
+        return self._composition.num_atoms
+
     @composition.deleter
     def composition(self):
         del self._composition
