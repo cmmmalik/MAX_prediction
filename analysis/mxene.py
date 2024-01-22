@@ -648,7 +648,8 @@ class MXeneAnalyzer:
 
         mxene_els = self.mxene.elements.unique_elements()
         pseduels = [i for i in els if i not in mxene_els]
-
+        if self.verbosity >=2:
+            print("pseduels els (subset): {}".format(pseduels))
         gen_iter = enumerate(combine_compounds_multisize(sphase,
                                                         combination_size=sizelimits,
                                                         necessary=None,
