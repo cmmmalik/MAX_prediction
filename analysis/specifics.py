@@ -407,7 +407,7 @@ class SidephaseMAX(MAXSpecies, Sidephases):
 
 class NewElements(NewElements):  # customized user defined classes to implement specific functions.
 
-    def get_set_elementalrows(self, dummyrows):
+    def get_set_elementalrows(self, dummyrows:dict={}):
         elrows = self.search_in_asedb()
         elrows.update(dummyrows)
         assertrowslen(elrows)
