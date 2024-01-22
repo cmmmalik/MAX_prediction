@@ -14,6 +14,8 @@ from ..base import MAXSpecie, MAXSpecies, Pandasutils
 from ..utils import sortfuncchemsys
 from utils_asedatabase import assertrowslen
 
+import warnings
+
 
 def get_elements_chemical_systems(chemical_systems:list):
     els = set()
