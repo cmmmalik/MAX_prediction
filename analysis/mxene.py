@@ -736,14 +736,47 @@ class MXeneAnalyzer:
                         if neg_coef:
                             continue
 
-                        print(Fore.BLUE + "the chempy solver balanced the reaction")
-                        print("Balanced: {}".format(i))
-                        print(coeffs)
-                        reactions_2solver.append(coeffs)
-                        print()
-                    except Exception as ex:
-                        print(ex)
-                        print(Fore.RED + "Couldn't balance by both solvers")
+
+        # for i, product in enumerate(combine_compounds_multisize(self.competing_phases.df.phase,
+        #                                                         combination_size=sizelimits,
+        #                                                         necessary=els)):
+        #     print("trying to balance:\n{}---->{}".format("+".join(reactants), "+".join(product)))
+        #     try:
+        #         _, coeffs = equation_balancer_v2(reactants=reactants,
+        #                                          products=product,
+        #                                          verbosity=0)
+        #
+        #         product_out = coeffs[-1]
+        #         reactant_out = coeffs[0]
+        #         neg_coef = Balance._check_negative_coeffs(product_out=product_out, reactant_out=reactant_out)
+        #         if neg_coef:
+        #             continue
+        #         print("Balanced: {}".format(i))
+        #         print(coeffs)
+        #         reactions.append(coeffs)
+        #         print()
+        #     except (LinearlydependentMatrix, AssertionError) as e:
+        #         print(e)
+        #         continue
+        #     except Exception as ex:
+        #         print("Error encountered by {}:{}".format(equation_balancer_v2.__name__, ex))
+        #         if solvers_check:
+        #             try:
+        #                 coeffs = balance_stoichiometry(reactants=reactants, products=product, underdetermined=None)
+        #                 product_out = coeffs[-1]
+        #                 reactant_out = coeffs[0]
+        #                 neg_coef = Balance._check_negative_coeffs(product_out=product_out, reactant_out=reactant_out)
+        #                 if neg_coef:
+        #                     continue
+        #
+        #                 print(Fore.BLUE + "the chempy solver balanced the reaction")
+        #                 print("Balanced: {}".format(i))
+        #                 print(coeffs)
+        #                 reactions_2solver.append(coeffs)
+        #                 print()
+        #             except Exception as ex:
+        #                 print(ex)
+        #                 print(Fore.RED + "Couldn't balance by both solvers")
 
         if reactions_2solver:
             return reactions, reactions_2solver
