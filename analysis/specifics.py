@@ -93,6 +93,10 @@ class MXeneSpecies(MAXSpecies):
     def get_maxformula(self):
         return [specie.max.formula for specie in self.composition]
 
+    def get_maxmxeneformula(self):
+        """Generates MXene_MAX formulas"""
+        return ["{}_{}".format(mx, maxp) for mx,maxp in zip(self.formula, self.get_maxformula())]
+
     def setmax(self, maxformulas: list or tuple):
         for specie, f in zip(self.composition, maxformulas):
             specie.max = f
