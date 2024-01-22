@@ -2,6 +2,7 @@ import os
 import pickle
 import warnings
 from itertools import chain as itchain
+from functools import partial
 
 import numpy as np
 from chempy import balance_stoichiometry
