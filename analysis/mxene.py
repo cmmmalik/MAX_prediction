@@ -162,7 +162,9 @@ class MXeneBase:
         els = NewElements(els)
         return [i for i in Genchemicalsystems(els.els, separator="-").gen_unique_sorted_possible_combinations()]
 
-    def _balance(self, reactants,
+    @staticmethod
+    def _balance(i,
+                 reactants,
                  product,
                  i,
                  solvers_check=True):
