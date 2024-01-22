@@ -9,7 +9,7 @@ from colorama import Fore
 from pandas import DataFrame, concat
 from pymatgen.core.periodic_table import Element as pymatElement
 from pymatgen.core import periodic_table
-
+from multiprocessing import Pool
 from mse.analysis.chemical_equations import equation_balancer_v2, LinearlydependentMatrix
 
 from .chemical_reactions import Balance, calculate_reaction_energy
