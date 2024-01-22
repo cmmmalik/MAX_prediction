@@ -166,7 +166,6 @@ class MXeneBase:
     def _balance(i,
                  reactants,
                  product,
-                 i,
                  solvers_check=True):
 
         eq1coeffs, eq2coeffs = Balance(reactants=reactants, product=product).balance(solvers_check=solvers_check)
