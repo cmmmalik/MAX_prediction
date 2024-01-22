@@ -122,6 +122,7 @@ class MXeneBase:
             self.solution = solution
 
         self.verbosity = verbosity
+        self.nproc = nproc
 
     @property
     def solution(self):
