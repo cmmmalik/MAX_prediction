@@ -179,6 +179,19 @@ class MXeneBase:
     def _calculate_reaction_enthalpies(reactions, energies, verbosity:int=1):
         return Balance.calculate_reaction_enthalpies(reactions=reactions, energies=energies, verbosity=verbosity)
 
+    @classmethod
+    def _get_reactions(cls, i, reactants, products, solvers_check=True, verbosity:int=1):
+
+        if verbosity >= 2:
+            print("product from enumeration: {}".format(products))
+
+        coeffs, coeffs_2balanc = cls._balance(reactants=reactants,
+                                               product=products,
+                                               i=i,
+                                               solvers_check=solvers_check)  # the two lists will be mutually exclusive.
+
+        return coeffs, coeffs_2balanc
+
 
 class MXeneReactions(MXeneBase):
 
