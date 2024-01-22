@@ -401,62 +401,82 @@ class MXeneSidephaseReactions(MXeneBase):
 
     def get_reactions(self, solvers_check=True):
 
+        def generate_iter_products():
+            for i, product in enumerate(combine_compounds_multisize(self.competing_phases.df.phase,
+                                                                    combination_size=sizelimits,
+                                                                    necessary=els)):
+                yield i, product
+
         reactions = []
         reactions_2solver = []
         reactants = [self.max.formula] + self.solution.formula.tolist()  # the reactants are fixed in this case
         maxsize, els = self.get_number_allowed_products()
-        sizelimits = range(2, maxsize + 1)
+        sizelimits = list(range(1, maxsize + 1))
 
-        for i, product in enumerate(combine_compounds_multisize(self.competing_phases.df.phase,
-                                                                combination_size=sizelimits,
-                                                                necessary=els)):
-            print("trying to balance:\n{}---->{}".format("+".join(reactants), "+".join(product)))
-            # try:
-            #     _, coeffs = equation_balancer_v2(reactants=reactants,
-            #                                      products=product,
-            #                                      verbosity=0)
-            #
-            #     product_out = coeffs[-1]
-            #     reactant_out = coeffs[0]
-            #     neg_coef = Balance._check_negative_coeffs(product_out=product_out, reactant_out=reactant_out)
-            #     if neg_coef:
-            #         continue
-            #     print("Balanced: {}".format(i))
-            #     print(coeffs)
-            #     reactions.append(coeffs)
-            #     print()
-            # except (LinearlydependentMatrix, AssertionError) as e:
-            #     print(e)
-            #     continue
-            # except Exception as ex:
-            #     print("Error encountered by {}:{}".format(equation_balancer_v2.__name__, ex))
-            #     if solvers_check:
-            #         try:
-            #             coeffs = balance_stoichiometry(reactants=reactants, products=product, underdetermined=None)
-            #             product_out = coeffs[-1]
-            #             reactant_out = coeffs[0]
-            #             neg_coef = Balance._check_negative_coeffs(product_out=product_out, reactant_out=reactant_out)
-            #             if neg_coef:
-            #                 continue
-            #
-            #             print(Fore.BLUE + "the chempy solver balanced the reaction")
-            #             print("Balanced: {}".format(i))
-            #             print(coeffs)
-            #             reactions_2solver.append(coeffs)
-            #             print()
-            #         except Exception as ex:
-            #             print(ex)
-            #             print(Fore.RED + "Couldn't balance by both solvers")
+        gen_iterproducts = generate_iter_products()
 
-            coeffs, coeffs_2balance = self._balance(reactants=reactants, product=product,i=i,solvers_check=solvers_check)
+        if not self.nproc:
+            for i, product in gen_iterproducts:
+                print("trying to balance:\n{}---->{}".format("+".join(reactants), "+".join(product)))
+                # try:
+                #     _, coeffs = equation_balancer_v2(reactants=reactants,
+                #                                      products=product,
+                #                                      verbosity=0)
+                #
+                #     product_out = coeffs[-1]
+                #     reactant_out = coeffs[0]
+                #     neg_coef = Balance._check_negative_coeffs(product_out=product_out, reactant_out=reactant_out)
+                #     if neg_coef:
+                #         continue
+                #     print("Balanced: {}".format(i))
+                #     print(coeffs)
+                #     reactions.append(coeffs)
+                #     print()
+                # except (LinearlydependentMatrix, AssertionError) as e:
+                #     print(e)
+                #     continue
+                # except Exception as ex:
+                #     print("Error encountered by {}:{}".format(equation_balancer_v2.__name__, ex))
+                #     if solvers_check:
+                #         try:
+                #             coeffs = balance_stoichiometry(reactants=reactants, products=product, underdetermined=None)
+                #             product_out = coeffs[-1]
+                #             reactant_out = coeffs[0]
+                #             neg_coef = Balance._check_negative_coeffs(product_out=product_out, reactant_out=reactant_out)
+                #             if neg_coef:
+                #                 continue
+                #
+                #             print(Fore.BLUE + "the chempy solver balanced the reaction")
+                #             print("Balanced: {}".format(i))
+                #             print(coeffs)
+                #             reactions_2solver.append(coeffs)
+                #             print()
+                #         except Exception as ex:
+                #             print(ex)
+                #             print(Fore.RED + "Couldn't balance by both solvers")
 
-            if coeffs:
-                reactions.append(coeffs)
-            elif coeffs_2balance:
-                reactions_2solver.append(coeffs_2balance)
+                coeffs, coeffs_2balance = self._balance(reactants=reactants,
+                                                        product=product,
+                                                        i=i,
+                                                        solvers_check=solvers_check)
 
-        if reactions_2solver:
-            return reactions, reactions_2solver
+                if coeffs:
+                    reactions.append(coeffs)
+                elif coeffs_2balance:
+                    reactions_2solver.append(coeffs_2balance)
+
+            if reactions_2solver:
+                return reactions, reactions_2solver
+
+        else:
+            func = partial(self._balance, reactants=reactants, solvers_check=True)
+
+            with Pool(self.nproc) as mp:
+                reactions, reactions_2solver = list(mp.imap(func, iterable=gen_iterproducts))
+
+            assert len(reactions) == reactions_2solver
+            warnings.warn("Reactions from both solvers are merged...", UserWarning)
+            reactions = list(filter(lambda x: x[0] if x[0] else x[1], zip(reactions, reactions_2solver)))
 
         print(Fore.RED + "Reactions unbalanced by first solver '{}' are also unbalanced by second solver '{}'".format(
             equation_balancer_v2.__name__,
