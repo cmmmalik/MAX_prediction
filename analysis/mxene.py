@@ -526,7 +526,18 @@ class MXeneAnalyzer:
             return reactions, DataFrame(reactions, columns=["reactants", "products"])
         return reactions
 
-    def get_mxene_reaction_enumerate(self, return_df=False, ):
+    def get_mxene_reaction_enumerate(self, return_df=False, nproc=None):
+
+        def internal_balance(i,product):
+
+            if self.verbosity >= 2:
+                print("product from enumeration: {}".format(product))
+            product = [self.mxene.formula] + list(product)
+
+            coeffs, coeffs_2balanc = self._balance(reactants=reactants, product=product, i=i,
+                                                   solvers_check=True)  # the two lists will be mutually exclusive.
+
+            return coeffs, coeffs_2balanc
 
         reactants = [self.max.formula] + self.solution.formula.tolist()
         maxsize, els = self.get_number_allowed_products()
