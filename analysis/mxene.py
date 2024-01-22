@@ -579,8 +579,8 @@ class MXeneAnalyzer:
             with Pool(nproc) as mp:
                 reactions, reactions_2solver = mp.imap(func=internal_balance,iterable=gen_iter, chunksize=4)
                 # filter here.
-                reactions = filter(bool, reactions)
-                reactions_2solver = filter(bool, reactions_2solver)
+                reactions = list(filter(bool, reactions))
+                reactions_2solver = list(filter(bool, reactions_2solver))
 
         if return_df:
             if reactions_2solver:
