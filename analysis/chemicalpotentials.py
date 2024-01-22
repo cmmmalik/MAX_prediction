@@ -1,3 +1,4 @@
+import warnings
 from ase.units import J, mol, kJ
 import numpy as np
 from pymatgen.core.composition import Composition
