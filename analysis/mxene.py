@@ -568,12 +568,17 @@ class MXeneAnalyzer:
                 # coeffs, coeffs_2balanc = self._balance(reactants=reactants, product=product, i=i,
                 #                                        solvers_check=True)  # the two lists will be mutually exclusive.
 
-            coeffs, coeffs_2balanc = self._balance(reactants=reactants, product=product, i=i,
-                                                   solvers_check=True)  # the two lists will be mutually exclusive.
-            if coeffs:
-                reactions.append(coeffs)
-            elif coeffs_2balanc:
-                reactions_2solver.append(coeffs_2balanc)
+                coeffs, coeffs_2balanc = internal_balance(i=i,product=product)
+
+                if coeffs:
+                    reactions.append(coeffs)
+                elif coeffs_2balanc:
+                    reactions_2solver.append(coeffs_2balanc)
+
+        else:
+            with Pool(nproc) as mp:
+                reactions, reactions_2solver = mp.imap(func=internal_balance,gen_iter)
+
 
         if return_df:
             if reactions_2solver:
