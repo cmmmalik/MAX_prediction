@@ -263,17 +263,28 @@ class MXeneReactions(MXeneBase):
             print("The number of chemical species found belonging to chemical system {}: {}".format(tosearchsys,
                                                                                                     len(species)))
             print("Species:\n{}".format(species))
+
+        iterlst = generate_products(species)
         reactions = []
+        if not self.nproc:
+            for i, product in iterlst:
+                coeffs, coeffs_2balanc = self._balance(i=i,
+                                                       reactants=reactants,
+                                                       product=product,
+                                                       solvers_check=True)
 
-        for i, sp in enumerate(species):  # will iterate over A-H chemical systems .......
-            product = [mxene.formula, sp, "H"]
-            coeffs, coeffs_2balanc = self._balance(reactants=reactants, product=product, i=i, solvers_check=True)
+                if coeffs:
+                    reactions.append(coeffs)
 
-            if coeffs:
-                reactions.append(coeffs)
+                elif coeffs_2balanc:
+                    reactions.append(coeffs_2balanc)
 
-            elif coeffs_2balanc:
-                reactions.append(coeffs_2balanc)
+        else:
+            func = partial(self._balance, reactants=reactants, solvers_check=True)
+            with Pool(self.nproc) as mp:
+                coeffs, coeffs_2balance = list(mp.imap(func, iterlst))
+                assert len(coeffs) == len(coeffs_2balance)
+                reactions = list(filter(lambda x: x[0] if x[0] else x[1], zip(coeffs, coeffs_2balance)))
 
         if return_df:
             return reactions, DataFrame(reactions, columns=["reactants", "products"])
