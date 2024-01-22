@@ -6,11 +6,11 @@ from itertools import chain as itchain
 import numpy as np
 from chempy import balance_stoichiometry
 from colorama import Fore
-from mse.analysis.chemical_equations import equation_balancer_v2, LinearlydependentMatrix
 from pandas import DataFrame, concat
 from pymatgen.core.periodic_table import Element as pymatElement
 from pymatgen.core import periodic_table
 
+from mse.analysis.chemical_equations import equation_balancer_v2, LinearlydependentMatrix
 
 from .chemical_reactions import Balance, calculate_reaction_energy
 from ..utils import Genchemicalsystems
