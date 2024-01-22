@@ -2,7 +2,7 @@ import os
 import shutil
 from tarfile import TarFile
 import pathlib
-
+import warnings
 
 def remove_suffixes(filename):
     filename = pathlib.Path(filename)
