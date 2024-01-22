@@ -554,13 +554,19 @@ class MXeneAnalyzer:
         mxene_els = self.mxene.elements.unique_elements()
         pseduels = [i for i in els if i not in mxene_els]
 
-        for i, product in enumerate(combine_compounds_multisize(sphase,
-                                                                combination_size=sizelimits,
-                                                                necessary=None,
-                                                                subset=pseduels)):
-            if self.verbosity >= 2:
-                print("product from enumeration: {}".format(product))
-            product = [self.mxene.formula] + list(product)
+        gen_iter = enumerate(combine_compounds_multisize(sphase,
+                                                        combination_size=sizelimits,
+                                                        necessary=None,
+                                                        subset=pseduels))
+        if not nproc:
+
+           for i, product in gen_iter:
+                # if self.verbosity >= 2:
+                #     print("product from enumeration: {}".format(product))
+                # product = [self.mxene.formula] + list(product)
+                #
+                # coeffs, coeffs_2balanc = self._balance(reactants=reactants, product=product, i=i,
+                #                                        solvers_check=True)  # the two lists will be mutually exclusive.
 
             coeffs, coeffs_2balanc = self._balance(reactants=reactants, product=product, i=i,
                                                    solvers_check=True)  # the two lists will be mutually exclusive.
