@@ -409,7 +409,11 @@ class NewElements(NewElements):  # customized user defined classes to implement 
 
     def get_set_elementalrows(self, dummyrows:dict={}):
         elrows = self.search_in_asedb()
-        elrows.update(dummyrows)
+
+        if dummyrows:
+            warnings.warn("Dummy rows was provided: {}".format(dummyrows))
+            elrows.update(dummyrows)
+
         assertrowslen(elrows)
         self.set_rows(elrows)
         return elrows
