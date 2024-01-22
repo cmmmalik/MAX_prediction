@@ -541,7 +541,7 @@ class MXeneAnalyzer:
 
         reactants = [self.max.formula] + self.solution.formula.tolist()
         maxsize, els = self.get_number_allowed_products()
-        sizelimits = range(1, maxsize)
+        sizelimits = list(range(1, maxsize))
 
         reactions = []
         reactions_2solver = []
