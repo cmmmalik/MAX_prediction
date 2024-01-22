@@ -240,6 +240,10 @@ class MXeneReactions(MXeneBase):
             return_df (bool, optional): _description_. Defaults to False.
         """
 
+        def generate_products(species):
+            for i, sp in enumerate(species):
+                yield i, [mxene.formula, sp, 'H']
+
         assert tipe in ["mxene", "tmxene"]
 
         reactants = [self.max.formula] + self.solution.formula.tolist()
