@@ -196,6 +196,17 @@ class MXeneReactions(MXeneBase):
 
     def __init__(self, mxene: MXeneSpecie, competing_phases: Sidephases, solution: Species, parentmax: MAXSpecie = None,
                  verbosity: int = 1, tmxene: MXeneSpecie = None):
+        """
+        This subclass of MXeneBase, handles MXene related analysis part, e.g. for finding out balanced reactions as well
+        as calculating the reaction energies.
+
+        :param mxene:
+        :param competing_phases:
+        :param solution:
+        :param parentmax:
+        :param verbosity:
+        :param tmxene:
+        """
 
         super().__init__(mxene, competing_phases, solution, parentmax, verbosity)
 
