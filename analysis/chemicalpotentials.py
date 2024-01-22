@@ -65,6 +65,8 @@ class BaseSpecie(CoreSpecie):
 
     @property
     def gibbs_energy(self): # 25°C for a standard state ...
+        if np.isclose(self.entropy, 0.0):
+            warnings.warn(f"entropy is equal to {self.entropy}. Set it first using .set_entropy(), if entropic contributions are to be included.")
         return self._enthalpy - Temp*self.entropy
 
     @property
