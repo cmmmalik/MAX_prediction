@@ -424,7 +424,10 @@ class NewElements(NewElements):  # customized user defined classes to implement 
         self.to_dataframe_entries()
 
     def setup_mongo_elements(self, config):
+        from MAX_prediction.io.utils import filter_lowesten_mongodb_entries
         self.connect_mongo(**config)  # get the Mongodb elements
         elentries = self.search_in_mpdb()
+        # here we sort them based and select the lowest energy element entry...
+        filter_lowesten_mongodb_entries(elentries, warn=True)
         assertrowslen(elentries)
         self.set_entries(elentries)
