@@ -192,3 +192,113 @@ class PickleTarLoggerCollections:
     def read(self):
         for index in range(len(self.obj.analyzers)):
             self._read_index_tarfile(index)
+
+
+class DataFramePickleTarLogger(PickleTarLoggerCollections):
+
+    def __init__(self, df: DataFrame = None,
+                 phases=None,
+                 reactant_column="reactant_0",
+                 tarfolder=None,
+                 tmpfolder=None):
+
+        self._phases = []
+        self._phase_index = {}
+        self.df = None
+        self.mode = "r"
+
+        assert tmpfolder or tarfolder
+
+        if tmpfolder:
+            # tarfolder = f"{tmpfolder.strip('.')}.tar.gz"
+            # tarfolder = tmpfolder.strip(".") if not tmpfolder.startswith("./") else "./" + tmpfolder.split("./", maxsplit=1)[-1].strip(".")
+            tarfolder = f"{tmpfolder}.tar.gz"
+        else:
+            tmpfolder = Path(tarfolder)
+            tmpfolder = tmpfolder.parent / tmpfolder.name.split(tmpfolder.suffixes[0])[0]
+            tmpfolder = tmpfolder.name
+
+        self.tmpfolder = tmpfolder
+
+        self.rcolumn = reactant_column
+        self._tarmerger = PickleMergerToTar(tar_file=tarfolder)
+
+        if phases:
+            self.phases = phases
+
+        else:
+            assert df is not None
+            self.phases = df[reactant_column].unique()
+
+        if df is not None:
+            self.df = df
+            self.mode = "w"
+
+        if not os.path.exists(tmpfolder) and not os.path.exists(self._tarmerger.file):
+            os.mkdir(tmpfolder)
+
+        elif self.mode == "r":
+
+            if os.path.exists(self._tarmerger.file):
+                warnings.warn(f"tar.gz folder: {self._tarmerger.file} already exists",
+                              RuntimeWarning)  # we are in the reading mode..., RuntimeWarning) # we are in the reading mode...
+            if os.path.exists(tmpfolder):
+                warnings.warn(f" tmp folder: {tmpfolder} already exists", RuntimeWarning)
+
+    @property
+    def phases(self):
+        return self._phases
+
+    @phases.setter
+    def phases(self, value):
+        self._phases = value
+        self._phase_index = {k: i for i, k in enumerate(value)}
+
+    def _pklfile_index(self, index):
+        assert self._phase_index[self.phases[index]] == index
+        return f"{self.phases[index]}.pkl"
+
+    def _full_pklfilepath_index(self, index):
+        return os.path.join(self.tmpfolder, self._pklfile_index(index))
+
+    def write_file_index(self, index):
+
+        file = self._full_pklfilepath_index(index=index)
+        assert not os.path.exists(file)
+
+        phase = self.phases[index]
+
+        with open(file, "wb") as ff:
+            df_ = self.df[self.df[self.rcolumn] == phase]
+            df_.to_pickle(ff)
+
+        self._tarmerger.add_pickle_file(file)
+
+    def write(self):
+
+        # the order does not matter, only the name of the phase (it should be unique..)
+        # we extract the tar first if it exists and then write the files. and then call append...
+
+        for index in range(len(self.phases)):
+            self.write_file_index(index=index)
+
+        self.merge()
+
+    def _read_index_tarfile(self, index):
+        pklfile = self._pklfile_index(index=index)
+        # assume Tarfile is already opened...
+        extfile = self._tarmerger.tarlogger.read_pickle_file(file=pklfile)
+        with extfile as log:
+            # df_ = read_pickle(log)
+            df_ = pickle.load(log)
+        return df_
+
+    def read(self):
+        Df = DataFrame()
+        with TarFile.open(self._tarmerger.file, "r") as self._tarmerger.tarlogger._tar:
+            for index in range(len(self.phases)):
+                Df = concat([Df, self._read_index_tarfile(index=index)], axis=0, ignore_index=True)
+
+        return Df
+
+
