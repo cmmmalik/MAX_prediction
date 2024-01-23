@@ -319,7 +319,7 @@ class MXeneReactions(MXeneBase):
                                                                     necessary=None,
                                                                     subset=pseduels)):
 
-                yield i,[mxene.formula] + list(product)
+                yield i, [mxene.formula] + list(product)
 
 
 
