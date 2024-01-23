@@ -4,8 +4,8 @@ import numpy as np
 from pymatgen.core.composition import Composition
 from pymatgen.core.ion import Ion
 
-from ..core.specie import CoreSpecie
-from ..data import read_file
+from MAX_prediction.core.specie import CoreSpecie
+from MAX_prediction.data import read_file
 
 Temp = 298.15 # K Room temperature in Kelvin
 R = 8.314*J/mol #  eV/unit

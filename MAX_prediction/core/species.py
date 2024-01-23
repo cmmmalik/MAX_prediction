@@ -5,7 +5,7 @@ from mse.ext.materials_project import SmartMPRester
 from pandas import DataFrame
 from pymatgen.core import Composition
 
-from ..utils import Genchemicalsystems
+from MAX_prediction.utils import Genchemicalsystems
 from .specie import CoreSpecie
 
 

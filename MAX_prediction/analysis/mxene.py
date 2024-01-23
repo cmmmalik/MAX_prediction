@@ -11,14 +11,14 @@ from pandas import DataFrame, concat
 from pymatgen.core.periodic_table import Element as pymatElement
 from pymatgen.core import periodic_table
 from multiprocessing import Pool
-from mse.analysis.chemical_equations import equation_balancer_v2, LinearlydependentMatrix
+from mse.analysis.chemical_equations import equation_balancer_v2
 
 from .chemical_reactions import Balance, calculate_reaction_energy
-from ..utils import Genchemicalsystems
-from ..core.species import Species
+from MAX_prediction.utils import Genchemicalsystems
+from MAX_prediction.core.species import Species
 from .specifics import MXeneSpecie, MXeneSpecies, Sidephases, NewElements
 from .specifics import MAXSpecies
-from ..base import MAXSpecie, combine_compounds_multisize
+from MAX_prediction.base import MAXSpecie, combine_compounds_multisize
 
 
 # from IPython.display import Markdown
@@ -666,7 +666,7 @@ class MXeneAnalyzer:
                 # coeffs, coeffs_2balanc = self._balance(reactants=reactants, product=product, i=i,
                 #                                        solvers_check=True)  # the two lists will be mutually exclusive.
 
-                coeffs, coeffs_2balanc = internal_balance(i=i,product=product)
+                coeffs, coeffs_2balanc = internal_balance(i=i, product=product)
 
                 if coeffs:
                     reactions.append(coeffs)
@@ -698,45 +698,45 @@ class MXeneAnalyzer:
 
         return eq1coeffs, eq2coeffs
 
-    def get_side_reactions(self, solvers_check=True):
+    def _get_reactions(self,i, reactants, products, solvers_check=True):
+
+        if self.verbosity >= 2:
+            print("product from enumeration: {}".format(products))
+
+        coeffs, coeffs_2balanc = self._balance(reactants=reactants,
+                                               product=products,
+                                               i=i,
+                                               solvers_check=solvers_check)  # the two lists will be mutually exclusive.
+
+        return coeffs, coeffs_2balanc
+
+    def get_side_reactions(self, solvers_check=True, nproc=None):
 
         reactions = []
         reactions_2solver = []
         reactants = [self.max.formula] + self.solution.formula.tolist()  # the reactants are fixed in this case
         maxsize, els = self.get_number_allowed_products()
-        sizelimits = range(2, maxsize + 1)
+        sizelimits = list(range(2, maxsize + 1))
 
-        for i, product in enumerate(combine_compounds_multisize(self.competing_phases.df.phase,
-                                                                combination_size=sizelimits,
-                                                                necessary=els)):
-            print("trying to balance:\n{}---->{}".format("+".join(reactants), "+".join(product)))
-            try:
-                _, coeffs = equation_balancer_v2(reactants=reactants,
-                                                 products=product,
-                                                 verbosity=0)
+        lst_iterable = combine_compounds_multisize(self.competing_phases.df.phase,
+                                                   combination_size=sizelimits,
+                                                   necessary=els)
+        if not nproc:
+            for i, product in lst_iterable:
+                coeffs, coeffs2 = self._get_reactions(i=i, reactants=reactants, products=product, solvers_check=solvers_check)
 
-                product_out = coeffs[-1]
-                reactant_out = coeffs[0]
-                neg_coef = Balance._check_negative_coeffs(product_out=product_out, reactant_out=reactant_out)
-                if neg_coef:
-                    continue
-                print("Balanced: {}".format(i))
-                print(coeffs)
-                reactions.append(coeffs)
-                print()
-            except (LinearlydependentMatrix, AssertionError) as e:
-                print(e)
-                continue
-            except Exception as ex:
-                print("Error encountered by {}:{}".format(equation_balancer_v2.__name__, ex))
-                if solvers_check:
-                    try:
-                        coeffs = balance_stoichiometry(reactants=reactants, products=product, underdetermined=None)
-                        product_out = coeffs[-1]
-                        reactant_out = coeffs[0]
-                        neg_coef = Balance._check_negative_coeffs(product_out=product_out, reactant_out=reactant_out)
-                        if neg_coef:
-                            continue
+                if coeffs:
+                    reactions.append(coeffs)
+                elif coeffs2:
+                    reactions_2solver.append(coeffs2)
+
+        else:
+            func = partial(self._get_reactions, reactants=reactants, solvers_check=solvers_check)
+            with Pool(nproc) as mp:
+                reactions, reactions_2solver = mp.imap(func=func, iterable=lst_iterable, chunksize=4)
+                # filter here.
+                reactions = list(filter(bool, reactions))
+                reactions_2solver = list(filter(bool, reactions_2solver))
 
 
         # for i, product in enumerate(combine_compounds_multisize(self.competing_phases.df.phase,

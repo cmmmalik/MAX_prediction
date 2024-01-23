@@ -4,14 +4,14 @@ from mse.composition_utils import MXene
 from pandas import DataFrame
 from pymatgen.core import Composition
 
-from ..elements import Elements
-from ..core.species import Species
-from ..core.specie import CoreSpecie
-from ..Database import SearchEnginenewapi, SearcherdB
-from ..Database import converttoformula_chemsysrows
-from ..utils import check_MAXlikecomp
-from ..base import MAXSpecie, MAXSpecies, Pandasutils
-from ..utils import sortfuncchemsys
+from MAX_prediction.elements import Elements
+from MAX_prediction.core.species import Species
+from MAX_prediction.core.specie import CoreSpecie
+from MAX_prediction.Database import SearchEnginenewapi, SearcherdB
+from MAX_prediction.Database import converttoformula_chemsysrows
+from MAX_prediction.utils import check_MAXlikecomp
+from MAX_prediction.base import MAXSpecie, MAXSpecies, Pandasutils
+from MAX_prediction.utils import sortfuncchemsys
 from utils_asedatabase import assertrowslen
 
 import warnings

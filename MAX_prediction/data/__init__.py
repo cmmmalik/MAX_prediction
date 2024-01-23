@@ -1,8 +1,8 @@
 from pandas import read_csv
-import io
+from MAX_prediction import io
 import os
 
-filename = os.path.join(os.path.dirname(__file__), "./NBS_thermochemical_data.csv")
+filename = os.path.join(os.path.dirname(__file__), "NBS_thermochemical_data.csv")
 
 
 def read_file(specie:str, file=None):
