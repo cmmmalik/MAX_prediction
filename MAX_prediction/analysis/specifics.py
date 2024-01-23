@@ -323,7 +323,9 @@ class Sidephases(SidephasesCore): # this class could be problem specific
     def setup_mongo(self, chemical_systems):
         docs, missing_chemsys = self.get_docs_chemical_systems_in_mongodb(chemsys=chemical_systems,
                                                                           sort_by_e_above_hull=True)
-        print("Missing_chemsys (from Mongdb are):\n{}".format(missing_chemsys))
+        # print("Missing_chemsys (from Mongdb are):\n{}".format(missing_chemsys)) # the parentclass is alreading
+        # outputing the missing chemical systems, no need
+        # to print them again here
         self.set_from_docs(docs)
         self.to_dataframe_entries()
 
