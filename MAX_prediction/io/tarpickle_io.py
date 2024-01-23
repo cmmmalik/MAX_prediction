@@ -9,7 +9,7 @@ from tarfile import TarFile
 
 from .tar_io import PickleMergerToTar
 
-from MAX_prediction.analysis.mxene import MXenesAnalyzers_beta, MXenesAnalyzersBase
+from MAX_prediction.analysis.mxene import MXeneAnalyzers_beta, MXenesAnalyzersBase
 
 
 class PickleTarLoggerCollections:
