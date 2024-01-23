@@ -509,6 +509,7 @@ class MXeneSidephaseReactions(MXeneBase):
 
 
 class MXeneAnalyzer:
+    warnings.warn("No longer in use", DeprecationWarning, stacklevel=2)
 
     def __init__(self,
                  mxene: MXeneSpecie,
