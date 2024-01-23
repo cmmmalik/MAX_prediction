@@ -215,7 +215,7 @@ class MXeneReactions(MXeneBase):
         :param tmxene:
         """
 
-        super().__init__(mxene, competing_phases, solution, parentmax, verbosity)
+        super().__init__(mxene, competing_phases, solution, parentmax, verbosity, nproc=nproc)
 
         self._tmxene = None
 
