@@ -836,10 +836,17 @@ class MXeneAnalyzerbetav1(MXeneReactions, MXeneSidephaseReactions):
                  parentmax:MAXSpecie=None,
                  tmxene:MXeneSpecie=None,
                  etchant_energies: dict = {},
-                 verbosity: int=1):
+                 verbosity: int=1,
+                 nproc=None):
 
-        MXeneReactions.__init__(self=self, mxene=mxene, competing_phases=competing_phases, solution=solution,
-                                parentmax=parentmax, verbosity=verbosity,tmxene=tmxene)
+        MXeneReactions.__init__(self=self,
+                                mxene=mxene,
+                                competing_phases=competing_phases,
+                                solution=solution,
+                                parentmax=parentmax,
+                                verbosity=verbosity,
+                                tmxene=tmxene,
+                                nproc=nproc)
 
         if not isinstance(molenergies, dict):
             raise ValueError(f"Expected an instance of {dict}, but got {type(molenergies)}")
