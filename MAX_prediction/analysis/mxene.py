@@ -1236,7 +1236,7 @@ class MXenesAnalyzersBase:
         assert isinstance(etchant_energies, dict)
         self.etchant_energies = etchant_energies  # it should be part of the solution
 
-        self._setup_(mxenes=mxenecomps, Tmxenes=Tmxenecomps, maxes=maxphases)
+        self._setup_(mxenes=mxenecomps, Tmxenes=Tmxenecomps, maxes=maxphases, nproc=nproc)
 
     @property
     def logger(self):
