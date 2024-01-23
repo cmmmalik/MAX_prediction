@@ -67,7 +67,7 @@ class MXeneSpecies(MAXSpecies):
 
     def __init__(self, formulas, parentmax=None):
         super(MXeneSpecies, self).__init__(formulas=formulas)
-        if parentmax:
+        if parentmax is not None:
             self.setmax(maxformulas=parentmax)
 
     @property
