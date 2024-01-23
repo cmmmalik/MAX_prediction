@@ -1204,7 +1204,8 @@ class MXenesAnalyzersBase:
                  sidephases: Sidephases,
                  solution: Species,
                  etchant_energies: dict = {},
-                 verbosity: int = 1):
+                 verbosity: int = 1,
+                 nproc=None):
         """
         Class to be used for a collective analysis of many MAX/MXenes systems. Up-to-date and should be used for
         the analysis.
