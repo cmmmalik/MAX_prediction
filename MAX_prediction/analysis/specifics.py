@@ -146,6 +146,9 @@ class MXeneSpecies(MAXSpecies):
     def setterm(self, term: list or tuple):
         self._set_coresp_attribute(attribute_name="term", attribute_lst=term)
 
+    def _set_coresp_attribute(self, attribute_name: str , attribute_lst: list or tuple,):
+        for specie, attr in zip(self.composition, attribute_lst):
+            setattr(specie, attribute_name, attr)
 
     def get_dict_energy_mxene(self):
         energies = {f"{specie.formula}_{specie.max.formula}": specie.energy_per_formula for specie in self.composition}
