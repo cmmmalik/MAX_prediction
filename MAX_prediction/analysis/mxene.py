@@ -260,7 +260,7 @@ class MXeneReactions(MXeneBase):
 
         assert tipe in ["mxene", "tmxene"]
 
-        reactants = [self.max.formula] + self.solution.formula.tolist()
+        reactants = self._reactants_
         mxene = getattr(self, tipe)
         maxmapp = mxene.max.elementsmap
         warnings.warn(
