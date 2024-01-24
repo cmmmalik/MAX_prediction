@@ -1152,6 +1152,48 @@ class MXeneAnalyzerbetav1(MXeneReactions, MXeneSidephaseReactions):
         return df
 
 
+class MultiTermMXeneAnalyzerbetav1(MXeneAnalyzerbetav1, MultiTermMXenReactions):
+    def __init__(self,
+                 mxene: MXeneSpecie,
+                 competing_phases: Sidephases,
+                 molenergies: dict,
+                 solution: Species,
+                 parentmax: MAXSpecie = None,
+                 tmxenes: MXeneSpecies = None, # assuming that the termination is part of tmxene.term
+                 etchant_energies: dict = {},
+                 verbosity: int = 1,
+                 nproc=None
+                 ):
+        """ For details about the parameter list, see MXeneReactions.
+
+        :param mxene:
+        :param competing_phases:
+        :param molenergies:
+        :param solution:
+        :param parentmax:
+        :param tmxenes:
+        :param etchant_energies:
+        :param verbosity:
+        :param nproc:
+        """
+
+    # initialize MultTermMXene
+        MultiTermMXenReactions.__init__(self=self,
+                                        mxene=mxene,
+                                        competing_phases=competing_phases,
+                                        parentmax=parentmax,
+                                        tmxenes=tmxenes,
+                                        solution=solution,
+                                        verbosity=verbosity,
+                                        nproc=nproc)
+
+        if not isinstance(molenergies, dict):
+            raise ValueError(f"Expected an instance of {dict}, but got {type(molenergies)}")
+
+        self.molenergies = molenergies
+        self.etchantenergies = etchant_energies
+
+
 class MXenesAnalyzers:
     warnings.warn("No longer in use", DeprecationWarning, stacklevel=2)
 
