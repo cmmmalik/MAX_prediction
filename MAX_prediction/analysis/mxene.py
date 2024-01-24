@@ -1539,7 +1539,7 @@ class MXenesAnalyzersBase:
 
         self.analyzers = analyzers
 
-    def get_reactions_index(self, index, mxeneenumerat=True, solvers_check=True):
+    def get_reactions_index(self, index, mxeneenumerate=True, solvers_check=True):
         """
         For the details about the arguments, see the documentation of MXeneAnalyzerbetav1.get_all_reactions.
         :param index:
