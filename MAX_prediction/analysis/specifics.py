@@ -104,6 +104,12 @@ class MXeneSpecies(MAXSpecies):
             self.setterm(term=termination)
 
 
+    def __repr__(self):
+        st = "{}".format(self.formula)
+        maxformulas = self.get_maxformula()
+        if maxformulas:
+            st += f", maxspecies={maxformulas}"
+        return "{0}({1})".format(MXeneSpecies.__name__, st)
 
     @property
     def formula(self):
