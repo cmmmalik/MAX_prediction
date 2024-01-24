@@ -1587,6 +1587,62 @@ class MXenesAnalyzersBase:
         DF = open_uprectants(DF)
         return DF
 
+class MultiTermMXeneAnalyzersBase(MXenesAnalyzersBase):
+    def __init__(self, 
+                 mxenecomps: MXeneSpecies,
+                 Tmxenecomps: MXeneSpecies,
+                 maxphases: MAXSpecies,
+                 sidephases: Sidephases,
+                 solution: Species,
+                 termination:list or tuple,
+                 etchant_energies: dict = {},
+                 verbosity: int = 1,
+                 nproc=None):
+        
+        super().__init__(self=self,
+                         mxenecomps=mxenecomps,
+                         Tmxenecomps=Tmxenecomps,
+                         maxphases=maxphases,
+                         sidephases=sidephases,
+                         solution=solution,
+                         etchant_energies=etchant_energies,
+                         verbosity=verbosity,
+                         nproc=nproc)
+
+        self.termination = termination
+
+    def _setup_(self, mxenes, Tmxenes, maxes, termination,  nproc=None,):
+        try:
+            assert len(mxenes) == int(len(Tmxenes)/len(termination)) == len(maxes)
+
+            analyzers = [MXeneAnalyzerbetav1(mxene=mxco,
+                                             competing_phases=Sidephases([]),
+                                             solution=self.solution,
+                                             molenergies={},
+                                             tmxene=tmxco,
+                                             parentmax=maxp,
+                                             etchant_energies=self.etchant_energies,
+                                             verbosity=self.verbosity,
+                                             nproc=nproc) for mxco, tmxco, maxp in
+                         zip(mxenes, Tmxenes, maxes)]
+        except AssertionError:
+        # we fail the assertion error, we have to make sure that maxes and baremxenes(mxenes here) are of
+        # same length
+            assert len(mxenes) == len(maxes)
+            assert len(Tmxenes) % len(maxes) == 0 # it is a multiplier.
+            # we create separate analyzer for unterminated and terminated MXenes..
+            analyzers = []
+            for mxco in mxenes:
+                lyzer = MXeneAnalyzerbetav1(mxene=mxco,
+                                            competing_phases=Sidephases([]),
+                                            solution=self.solution,
+                                            molenergies={},
+                                            tmxene=MXeneSpecie([]),
+                                            )
+
+
+        self.analyzers = analyzers
+
 
 class MXeneAnalyzers_beta(MXenesAnalyzersBase):
     """
