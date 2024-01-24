@@ -210,12 +210,16 @@ class MXeneReactions(MXeneBase):
         This subclass of MXeneBase, handles MXene related analysis part, e.g. for finding out balanced reactions as well
         as calculating the reaction energies.
 
-        :param mxene:
-        :param competing_phases:
-        :param solution:
-        :param parentmax:
-        :param verbosity:
-        :param tmxene:
+        :param mxene: (MXeneSpecie, required), BareMXene without any termination.
+        :param competing_phases: (Sidephases, required), competing phases for MXeneSpecie, that will be iterated and combined for
+        finding balanced side reactions against MXene formation.
+        :param solution: (Species, required), etchant solution
+        :param parentmax:(MAXSpecie, required), parent MAX phase corresponding to MXeneSpecie. The composition should
+        match the maxphase composition in MXeneSpecie, otherwise, an error is raised.
+        :param verbosity:(int,optional, default=1), set the verbosity level of log output.
+        :param tmxene: (MXeneSpecie, optional, default=None), terminated MXeneSpecie.
+        :param nproc:(int,optional, default=None), number of processors to be used for parallel processing mainly for
+        finding out balanced side reactions. Still under testing phase.
         """
 
         super().__init__(mxene, competing_phases, solution, parentmax, verbosity, nproc=nproc)
