@@ -1,6 +1,8 @@
 import h5py
 import numpy as np
 
+from MAX_prediction.analysis.mxene import MXeneAnalyzers_beta
+
 
 class ReactionsLogger:
 
