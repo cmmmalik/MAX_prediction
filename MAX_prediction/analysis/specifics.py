@@ -93,7 +93,10 @@ class MXeneSpecies(MAXSpecies):
     def __init__(self, formulas, parentmax=None, termination=None):
         """ An object for handling a collection of MXene species.
 
-    def __init__(self, formulas, parentmax=None):
+        :param formulas: (list, tuple, required),  mxene formulas or MXeneSpecie
+        :param parentmax: (list, tuple, optional), formulas of parent max,
+        :param termination:(list, tuple, optional), chemical termination.
+        """
         super(MXeneSpecies, self).__init__(formulas=formulas)
         if parentmax is not None:
             self.setmax(maxformulas=parentmax)
