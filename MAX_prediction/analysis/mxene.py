@@ -855,6 +855,20 @@ class MXeneAnalyzerbetav1(MXeneReactions, MXeneSidephaseReactions):
                  etchant_energies: dict = {},
                  verbosity: int=1,
                  nproc=None):
+        """
+        First stable implementation of MXeneAnalyzer, This should be used for a single type of termination. If multiple
+        terminated MXenes are involved. Then use 'MultiTermMXeneAnalyzerbetav1'. For details of parameters see the
+        documentation of MXeneReactions
+        :param mxene:
+        :param competing_phases:
+        :param molenergies:
+        :param solution:
+        :param parentmax:
+        :param tmxene:
+        :param etchant_energies:
+        :param verbosity:
+        :param nproc:
+        """
 
         MXeneReactions.__init__(self=self,
                                 mxene=mxene,
