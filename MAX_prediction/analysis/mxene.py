@@ -1259,6 +1259,17 @@ class MXenesAnalyzersBase:
         :param verbosity:
         """
 
+        self.__inner_initialize(mxenecomps=mxenecomps,
+                                Tmxenecomps=Tmxenecomps,
+                                maxphases=maxphases,
+                                sidephases=sidephases,
+                                solution=solution,
+                                etchant_energies=etchant_energies,
+                                verbosity=verbosity)
+        self._setup_(mxenes=mxenecomps, Tmxenes=Tmxenecomps, maxes=maxphases, nproc=nproc)
+
+    def __inner_initialize(self, mxenecomps, Tmxenecomps, maxphases, sidephases, solution, etchant_energies, verbosity):
+
         self.verbosity = verbosity
         self._logger = None
 
@@ -1275,8 +1286,6 @@ class MXenesAnalyzersBase:
 
         assert isinstance(etchant_energies, dict)
         self.etchant_energies = etchant_energies  # it should be part of the solution
-
-        self._setup_(mxenes=mxenecomps, Tmxenes=Tmxenecomps, maxes=maxphases, nproc=nproc)
 
     @property
     def logger(self):
