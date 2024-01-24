@@ -44,6 +44,15 @@ class MXeneSpecie(CoreSpecie):
         self.verbosity = verbosity
 
 
+    def __repr__(self):
+        st = "{}".format(self.formula)
+        if self.max:
+            st += f", {self.max}"
+        if self.term:
+            st += f", term={self.term}"
+        return "{0}({1})".format(MXeneSpecie.__name__, st)
+
+
     @property
     def formula(self):
         return self._formula
