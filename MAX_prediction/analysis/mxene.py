@@ -1317,7 +1317,6 @@ class MXenesAnalyzersBase:
         # for example, if we have different number of functionalized MXenes than baremxenes because we are considering
         # more than one type of termiantion at the surface..
 
-        assert len(mxenes) == len(Tmxenes) == len(maxes)
         analyzers = [MXeneAnalyzerbetav1(mxene=mxco,
                                                competing_phases=Sidephases([]),
                                                solution=self.solution,
