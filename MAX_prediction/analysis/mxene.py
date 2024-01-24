@@ -409,15 +409,14 @@ class MXeneReactions(MXeneBase):
         return {self.max.formula:self.max.energy_per_formula}
 
     def get_energies(self):
-        mxene_en = {self.mxene.formula: self.mxene.energy_per_formula, }
+        mxene_en = self.get_mxene_en
         tmxene_en = {}
         if self.tmxene:
-            tmxene_en = {self.tmxene.formula: self.tmxene.energy_per_formula}
-
+            tmxene_en = self.get_tmxene_en
 
         max_en = None
         if self.max.energy_per_formula:
-            max_en = {self.max.formula: self.max.energy_per_formula}
+            max_en = self.get_max_en
 
         return mxene_en, tmxene_en, max_en
 
