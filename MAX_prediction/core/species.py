@@ -70,8 +70,13 @@ class CoreSpecies:
 
     @formula.setter
     def formula(self, value: list or tuple or np.ndarray):
-        self._composition = [CoreSpecie(i) for i in value]
-        self._formula = np.asarray(value)
+        if all([isinstance(v, self.coresp) for v in value]):
+            formula = [v.formula for v in value]
+            self._composition = value
+            self._formula = np.asarray(formula)
+        else:
+            self._composition = [self.coresp(i) for i in value]
+            self._formula = np.asarray(value)
 
     @property
     def composition(self):
