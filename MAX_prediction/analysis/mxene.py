@@ -1312,7 +1312,10 @@ class MXenesAnalyzersBase:
             print("MAX: {}".format(lyzer.max.formula))
             print("Competing phases:\n{}".format(lyzer.competing_phases))
 
-    def _setup_(self, mxenes, Tmxenes, maxes):
+    def _setup_(self, mxenes, Tmxenes, maxes,  nproc=None,):
+        assert len(mxenes) == len(Tmxenes) == len(maxes) # Todo: This does not work if this assertion is not satisfied
+        # for example, if we have different number of functionalized MXenes than baremxenes because we are considering
+        # more than one type of termiantion at the surface..
 
         assert len(mxenes) == len(Tmxenes) == len(maxes)
         analyzers = [MXeneAnalyzerbetav1(mxene=mxco,
