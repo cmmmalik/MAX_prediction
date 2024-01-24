@@ -22,10 +22,17 @@ class CoreSpecies:
         return self.__repr__()
 
     def __getitem__(self, index):
-        if isinstance(index, int):
-            return self._composition[index]
+        if not isinstance(index, str):
+            try:
+                item = self._composition[index]
+            except TypeError:
+                item = [self._composition[i] for i in index]
+            return item if not isinstance(item, (list, tuple)) else self.__class__(item)
 
         return self._find_from_name(index)
+
+    def __len__(self):
+        return len(self.formula)
 
     def __delitem__(self, key):
         def _delete(index):
@@ -47,7 +54,7 @@ class CoreSpecies:
 
         index = self.find_index_name(index)
         if len(index) > 1:
-            return [self._composition[i] for i in index]
+            return self.__class__([self._composition[i] for i in index])
 
         return self._composition[index[0]]
 
