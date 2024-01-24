@@ -886,6 +886,15 @@ class MXeneAnalyzerbetav1(MXeneReactions, MXeneSidephaseReactions):
         self.etchantenergies = etchant_energies
 
     def get_all_reactions(self, mxenenumerate=True, solvers_check=True):
+        """ Will do the search for the balanced reactions of mxene, terminated-mxene and "sidereactions"
+        (alongwith "side2reactions" if solvers_check is True).
+
+        :param mxenenumerate: (bool,optional,default=True), whether to search for all permutations of MXene
+        with side phases, not just the standard MXene formation reaction.
+        :param solvers_check: (bool,optional, default=True), whether to check and get the results from both solvers
+        (native) and from that of chempy.
+        :return: None.
+        """
 
         assert "mxenes" not in self.outputs and "Tmxenes" not in self.outputs
         assert "sidereactions" not in self.outputs and "side2reactions" not in self.outputs
