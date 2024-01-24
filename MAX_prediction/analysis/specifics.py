@@ -33,10 +33,13 @@ class MXeneSpecie(CoreSpecie):
         self._composition = None
         self._elements = None
         self._max = None
+        self._term = None
 
         self.formula = formula
         if parentmax:
             self.max = parentmax
+        
+        self.term = termination
         self.verbosity = verbosity
 
 
@@ -65,6 +68,14 @@ class MXeneSpecie(CoreSpecie):
     def max(self, value):
         self._max = MAXSpecie(value)
 
+    @property
+    def term(self):
+        return self._term
+    
+    @term.setter
+    def term(self, value):
+        Composition(value)
+        self._term = value
 
 class MXeneSpecies(MAXSpecies):
 
