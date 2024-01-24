@@ -396,6 +396,17 @@ class MXeneReactions(MXeneBase):
                 reactions1 += reaction2solver
 
             self.outputs[key] = reactions1
+    @property
+    def get_mxene_en(self):
+        return {self.mxene.formula: self.mxene.energy_per_formula}
+
+    @property
+    def get_tmxene_en(self):
+        return {self.tmxene.formula: self.tmxene.energy_per_formula}
+
+    @property
+    def get_max_en(self):
+        return {self.max.formula:self.max.energy_per_formula}
 
     def get_energies(self):
         mxene_en = {self.mxene.formula: self.mxene.energy_per_formula, }
