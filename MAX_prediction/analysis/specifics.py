@@ -38,8 +38,9 @@ class MXeneSpecie(CoreSpecie):
         self.formula = formula
         if parentmax:
             self.max = parentmax
-        
-        self.term = termination
+
+        if termination:
+            self.term = termination
         self.verbosity = verbosity
 
 
