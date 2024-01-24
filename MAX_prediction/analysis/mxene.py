@@ -1318,13 +1318,14 @@ class MXenesAnalyzersBase:
         # more than one type of termiantion at the surface..
 
         analyzers = [MXeneAnalyzerbetav1(mxene=mxco,
-                                               competing_phases=Sidephases([]),
-                                               solution=self.solution,
-                                               molenergies={},
-                                               tmxene=tmxco,
-                                               parentmax=maxp,
-                                               etchant_energies=self.etchant_energies,
-                                               verbosity=self.verbosity) for mxco, tmxco, maxp in
+                                         competing_phases=Sidephases([]),
+                                         solution=self.solution,
+                                         molenergies={},
+                                         tmxene=tmxco,
+                                         parentmax=maxp,
+                                         etchant_energies=self.etchant_energies,
+                                         verbosity=self.verbosity,
+                                         nproc=nproc) for mxco, tmxco, maxp in
                      zip(mxenes, Tmxenes, maxes)]
 
         self.analyzers = analyzers
