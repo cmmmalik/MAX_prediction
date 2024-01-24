@@ -88,6 +88,9 @@ class MXeneSpecie(CoreSpecie):
         self._term = value
 
 class MXeneSpecies(MAXSpecies):
+    coresp = MXeneSpecie
+    def __init__(self, formulas, parentmax=None, termination=None):
+        """ An object for handling a collection of MXene species.
 
     def __init__(self, formulas, parentmax=None):
         super(MXeneSpecies, self).__init__(formulas=formulas)
