@@ -10,7 +10,7 @@ from .specie import CoreSpecie
 
 
 class CoreSpecies:
-
+    coresp = CoreSpecie
     def __init__(self, formulas: list or tuple or np.ndarray):
         self.formula = formulas
 
