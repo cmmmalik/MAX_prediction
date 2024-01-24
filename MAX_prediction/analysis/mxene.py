@@ -1321,6 +1321,10 @@ class MXenesAnalyzersBase:
 
 
 class MXeneAnalyzers_beta(MXenesAnalyzersBase):
+    """
+    This class was designed to handle MXene enumeration only. The methods allow for the case of only enumerating MXene
+    reactions without enumeration over possible side reactions.
+    """
 
     # output_keys = ['mxenes', 'Tmxenes', 'sidereactions', 'side2reactions']
 
