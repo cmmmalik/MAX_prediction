@@ -11,6 +11,7 @@ from pandas import DataFrame, concat
 from pymatgen.core.periodic_table import Element as pymatElement
 from pymatgen.core import periodic_table
 from multiprocessing import Pool
+from MAX_prediction.analysis.specifics import MXeneSpecie, Sidephases
 from mse.analysis.chemical_equations import equation_balancer_v2
 
 from .chemical_reactions import Balance, calculate_reaction_energy
