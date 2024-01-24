@@ -1550,7 +1550,7 @@ class MXenesAnalyzersBase:
 
         self.set_side_phasesdf_index(index=index)
         lyzer = self.analyzers[index]
-        lyzer.get_all_reactions(mxeneenumerat=mxeneenumerat, solvers_check=solvers_check)
+        lyzer.get_all_reactions(mxenenumerate=mxeneenumerate, solvers_check=solvers_check)
 
     def get_reactions(self):
 
