@@ -192,6 +192,9 @@ class MXeneBase:
 
         return coeffs, coeffs_2balanc
 
+    @property
+    def _reactants_(self):
+        return [self.max.formula] + [self.solution.formula.tolist()]
 
 class MXeneReactions(MXeneBase):
 
