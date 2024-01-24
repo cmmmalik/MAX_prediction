@@ -143,6 +143,10 @@ class MXeneSpecies(MAXSpecies):
         for specie, f in zip(self.composition, maxformulas):
             specie.max = f
 
+    def setterm(self, term: list or tuple):
+        self._set_coresp_attribute(attribute_name="term", attribute_lst=term)
+
+
     def get_dict_energy_mxene(self):
         energies = {f"{specie.formula}_{specie.max.formula}": specie.energy_per_formula for specie in self.composition}
         return energies
