@@ -100,6 +100,10 @@ class MXeneSpecies(MAXSpecies):
         super(MXeneSpecies, self).__init__(formulas=formulas)
         if parentmax is not None:
             self.setmax(maxformulas=parentmax)
+        if termination is not None:
+            self.setterm(term=termination)
+
+
 
     @property
     def formula(self):
