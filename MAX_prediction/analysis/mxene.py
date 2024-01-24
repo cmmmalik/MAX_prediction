@@ -421,6 +421,173 @@ class MXeneReactions(MXeneBase):
         return mxene_en, tmxene_en, max_en
 
 
+class MultiTermMXenReactions(MXeneReactions):
+
+    def __init__(self, 
+                 mxene: MXeneSpecie,
+                 competing_phases: Sidephases, 
+                 solution: Species, 
+                 parentmax: MAXSpecie = None, 
+                 verbosity: int = 1, 
+                 tmxenes: MXeneSpecies = None, # allow for multiple MXeneSpecies, instead of just one
+                 nproc=None):
+        """
+        Difference between this and MXeneReactions is of termination handling. This class includes termination as well
+        and can handle multiple(different) terminated MXenes. It is usually used by a subclass. For details of the
+        paremeters, see 'MXeneReactions' class.
+
+        :param mxene:
+        :param competing_phases:
+        :param solution:
+        :param parentmax:
+        :param verbosity:(int, default, 1), set the verbosity level.
+        :param tmxenes:
+        :param nproc:(int, default, None), number of processors for parallel processing of finding out the reactions
+        """
+        
+        super().__init__(mxene, competing_phases, solution, parentmax, verbosity, tmxene=None, nproc=nproc)
+        self._tmxenes = None
+
+        if tmxenes:
+            assert all([self.max.formula == tmxene.max.formula for tmxene in tmxenes])
+            self.tmxenes = tmxenes
+
+    @property
+    def tmxenes(self):
+        return self._tmxenes
+    
+    @tmxenes.setter
+    def tmxenes(self, value:MXeneSpecies):
+        if not isinstance(value, MXeneSpecies):
+            raise TypeError(f"Expected an instance of {MXeneSpecie.__name__}, but got {type(value)}")
+        
+        self._tmxene = value
+
+
+    def get_mxene_reaction_enumerate(self,
+                                     tipe="mxene",
+                                     return_df=False,
+                                     allow_all: bool = False):
+        """
+        returns all possible reactions of mxenes, by enumerating and checking over all possible reactions and finding out
+        only the balanced reaction.
+        :param tipe: str, default mxene, can be tmxene or mxene only
+        :param return_df: bool, default False
+        :param allow_all: bool, default False
+        :return:
+        """
+
+        if tipe=="mxene":
+            mxene = getattr(self, tipe)
+            return self._get_mxene_reaction_enumerate(mxene=mxene,
+                                                      return_df=return_df,
+                                                      allow_all=allow_all)
+        else: # we have to iterate over all the terminations..
+            reactions = []
+            reactions2solver = []
+            termlengths = {}
+            for tmxene in self.tmxenes:
+                reac0, reac2 = self._get_mxene_reaction_enumerate(mxene=tmxene,
+                                                                  return_df=return_df,
+                                                                  allow_all=allow_all)
+                reactions.append(reac0)
+                reactions2solver.append(reac2)
+                termlengths[tmxene.term] = len(reactions) + len(reactions2solver)
+
+            return reactions, reactions2solver
+
+    def _get_mxene_reaction_enumerate(self,
+                                     mxene=None,
+                                     return_df=False,
+                                     allow_all: bool = False):
+
+        """Gets all possible reactions by including all possible side phases as byproduct in the MXene synthesis reaction.
+
+
+        Args:
+            mxene (str, optional): _description_. Defaults to None.
+            return_df (bool, optional): _description_. Defaults to False.
+
+        Returns:
+            _type_: _description_
+        """
+
+        def generate_products():
+            for i, product in enumerate(combine_compounds_multisize(sphase,
+                                                                    combination_size=sizelimits,
+                                                                    necessary=None,
+                                                                    subset=pseduels)):
+
+                yield i, [mxene.formula] + list(product)
+
+        reactants = [self.max.formula] + self.solution.formula.tolist()
+        maxsize, els = self.get_number_allowed_products()
+        sizelimits = list(range(1, maxsize+1))
+
+        reactions = [] # output from solver 1
+        reactions_2solver = [] # output from solver 2
+        sphase = self.competing_phases.df.phase # get the competing phases ..
+
+        print("No. of phases originally= {}".format(len(sphase)))
+        sphase = sphase[(sphase != self.mxene.formula) & (sphase != self.tmxene.formula)] # unterminated MXene
+        sphase = sphase[~sphase.isin(reactants)]
+        print("No. of phases after (removing MXene and T-MXene compositions): {}".format(len(sphase)))
+
+        mxene_els = self.mxene.elements.unique_elements()  # unterminated Elements
+
+        if not allow_all:
+            pseduels = [i for i in els if i not in mxene_els]
+        else:
+            pseduels = els
+
+        gen_iterproducts = generate_products()
+        # for parallel processing, in case of nproc is provided
+        if not self.nproc:
+            for i, product in gen_iterproducts:
+
+                if self.verbosity >= 2:
+                    print("product from enumeration: {}".format(product))
+
+                coeffs, coeffs_2balanc = self._balance(reactants=reactants,
+                                                       product=product,
+                                                       i=i,
+                                                       solvers_check=True)  # the two lists will be mutually exclusive.
+                if coeffs:
+                    reactions.append(coeffs)
+                elif coeffs_2balanc:
+                    reactions_2solver.append(coeffs_2balanc)
+
+        else:
+            func = partial(self._balance, reactants=reactants, solvers_check=True)
+
+            with Pool(self.nproc) as mp:
+                reactions, reactions_2solver = list(mp.imap(func=func, iterable=gen_iterproducts))
+
+            assert len(reactions) == len(reactions_2solver)
+            warnings.warn("Reactions from both solvers are merged...", UserWarning)
+            reactions = list(filter(lambda x: x[0] if x[0] else x[1], zip(reactions, reactions_2solver)))
+
+        if return_df:
+            if reactions_2solver:
+                return reactions, DataFrame(reactions, columns=["reactants", "products"]), reactions_2solver, DataFrame(
+                    reactions_2solver, columns=["reactants", "products"])
+
+        return reactions, reactions_2solver,
+
+    @property
+    def get_tmxene_en(self):
+        energy = {tmxene.formula: tmxene.energy_per_formula for tmxene in self.tmxenes}
+        assert len(energy) == len(self.tmxenes)
+        return energy
+    def get_energies(self):
+        mxene_en, tmxene_en, max_en = super().get_energies(self)
+        assert tmxene_en is None
+        if self.tmxenes:
+            tmxene_en = self.get_tmxene_en
+
+        return mxene_en, tmxene_en, max_en
+
+
 class MXeneSidephaseReactions(MXeneBase):
 
     def get_reactions(self, solvers_check=True):
