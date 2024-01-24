@@ -106,7 +106,7 @@ class MXeneSpecies(MAXSpecies):
 
     def __repr__(self):
         st = "{}".format(self.formula)
-        maxformulas = self.get_maxformula()
+        maxformulas = self.get_maxformula
         if maxformulas:
             st += f", maxspecies={maxformulas}"
         return "{0}({1})".format(MXeneSpecies.__name__, st)
@@ -156,7 +156,7 @@ class MXeneSpecies(MAXSpecies):
 
     def select_maxph(self, maxformula:str):
 
-        index = np.where(self.get_maxformula() == np.asarray(maxformula))[0]
+        index = np.where(self.get_maxformula == np.asarray(maxformula))[0]
         if index.size == 0:
             raise ValueError("No mxene of max formula {} found".format(maxformula))
 
