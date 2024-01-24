@@ -131,6 +131,7 @@ class MXeneSpecies(MAXSpecies):
     def get_maxcompos(self):
         return [specie.max for specie in self.composition]
 
+    @cached_property
     def get_maxformula(self):
         return [specie.max.formula for specie in self.composition]
 
