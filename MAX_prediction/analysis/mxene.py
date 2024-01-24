@@ -1560,12 +1560,12 @@ class MXenesAnalyzersBase:
             if logger:  # reading from the logger
                 logger.check_read_data_index(index=i)
 
-        lyzer = self.analyzers[i]
+            lyzer = self.analyzers[i]
 
-        if not lyzer.outputs:
-            self.get_reactions_index(index=i)
-            if logger:
-                logger.write_index_(index=i, whether_energies=True, etchantenergies=None)
+            if not lyzer.outputs:
+                self.get_reactions_index(index=i)
+                if logger:
+                    logger.write_index_(index=i, whether_energies=True, etchantenergies=None)
 
         if logger:
             logger.merge()
