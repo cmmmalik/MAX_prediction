@@ -154,6 +154,13 @@ class MXeneSpecies(MAXSpecies):
         energies = {f"{specie.formula}_{specie.max.formula}": specie.energy_per_formula for specie in self.composition}
         return energies
 
+    def select_maxph(self, maxformula:str):
+
+        index = np.where(self.get_maxformula() == np.asarray(maxformula))[0]
+        if index.size == 0:
+            raise ValueError("No mxene of max formula {} found".format(maxformula))
+
+        return self[index]
 
 class SidephasesCore(Species):
 
