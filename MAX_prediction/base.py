@@ -36,6 +36,10 @@ class MAXSpecie(CoreSpecie):
         self.formula = formula
         self.verbosity = verbosity
 
+    def __repr__(self):
+        st = f"{self.formula}, {self.Elements}, chemsys={self.chemicalsystem}"
+        return "{0}({1})".format(MAXSpecie.__name__, st)
+
     @property
     def formula(self):
         return self._formula
