@@ -2,6 +2,7 @@ import warnings
 
 import numpy as np
 from ase.db.core import Database as dBcore
+from functools import cached_property
 from mse.composition_utils import MXene
 from pandas import DataFrame
 from pymatgen.core import Composition
