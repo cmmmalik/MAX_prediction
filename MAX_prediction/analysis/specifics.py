@@ -27,7 +27,7 @@ def get_elements_chemical_systems(chemical_systems:list):
 
 
 class MXeneSpecie(CoreSpecie):
-    
+
     def __init__(self, formula: str, parentmax=None, termination:str=None, verbosity: int = 1):
         super(MXeneSpecie, self).__init__(formula=formula)
         self._composition = None
