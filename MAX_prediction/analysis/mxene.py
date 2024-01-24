@@ -304,6 +304,7 @@ class MXeneReactions(MXeneBase):
         if return_df:
             return reactions, DataFrame(reactions, columns=["reactants", "products"])
         return reactions
+    
 
     def get_mxene_reaction_enumerate(self,
                                      tipe="mxene",
