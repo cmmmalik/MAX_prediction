@@ -330,8 +330,6 @@ class MXeneReactions(MXeneBase):
 
                 yield i, [mxene.formula] + list(product)
 
-
-
         reactants = [self.max.formula] + self.solution.formula.tolist()
         maxsize, els = self.get_number_allowed_products()
         sizelimits = list(range(1, maxsize+1))
