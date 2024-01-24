@@ -117,7 +117,7 @@ class MXeneSpecies(MAXSpecies):
 
     @formula.setter
     def formula(self, value):
-        if all([isinstance(v, MAXSpecie) for v in value]):
+        if all([isinstance(v, MXeneSpecie) for v in value]):
             formula = [v.formula for v in value]
             self._composition = value
             self._formula = np.asarray(formula)
