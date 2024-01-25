@@ -198,9 +198,9 @@ class MXeneBase:
             print("product from enumeration: {}".format(products))
 
         coeffs, coeffs_2balanc = cls._balance(reactants=reactants,
-                                               product=products,
-                                               i=i,
-                                               solvers_check=solvers_check)  # the two lists will be mutually exclusive.
+                                              product=products,
+                                              i=i,
+                                              solvers_check=solvers_check)  # the two lists will be mutually exclusive.
 
         return coeffs, coeffs_2balanc
 
