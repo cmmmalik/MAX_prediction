@@ -36,6 +36,10 @@ class MAXSpecie(CoreSpecie):
         self.formula = formula
         self.verbosity = verbosity
 
+    def __repr__(self):
+        st = f"{self.formula}, {self.Elements}, chemsys={self.chemicalsystem}"
+        return "{0}({1})".format(MAXSpecie.__name__, st)
+
     @property
     def formula(self):
         return self._formula
@@ -1405,6 +1409,13 @@ class MAXAnalyzer(MAXSpecies):
 
 
 def calculate_total_energy_from_formation_energy(comp: str, en: float, elemental_energies: dict):
+    """ This function calculates the total energy from the formation energy and the elemental energies. It expected the
+    formation energy as -1 times formation energy. Therefore. Make sure that formation_energy being input is -1*actual_formation_energy
+    of the phase.
+    """
+    # Potential bug, if the formation 
+    warnings.warn("Make sure the formation energy, input (en) is -1*formation_energy of the phase", UserWarning)
+
     if isinstance(comp, str):
         comp = Pycomp(comp)
     energies = {el: elemental_energies[el] for el in comp.get_el_amt_dict().keys()}

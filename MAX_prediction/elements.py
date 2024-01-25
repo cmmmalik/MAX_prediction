@@ -4,8 +4,8 @@ import numpy as np
 # from mse.composition_utils import EnhancedComposition as Composition
 from pymatgen.core.periodic_table import Element as Elts
 
-from .core.specie import CoreSpecie
-from .core.species import Species
+from MAX_prediction.core.specie import CoreSpecie
+from MAX_prediction.core.species import Species
 
 
 class Elements(Species):

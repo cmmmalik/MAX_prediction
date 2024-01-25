@@ -1,18 +1,21 @@
+import warnings
+
 import numpy as np
 from ase.db.core import Database as dBcore
+from functools import cached_property
 from mse.composition_utils import MXene
 from pandas import DataFrame
 from pymatgen.core import Composition
-
-from ..elements import Elements
-from ..core.species import Species
-from ..core.specie import CoreSpecie
-from ..Database import SearchEnginenewapi, SearcherdB
-from ..Database import converttoformula_chemsysrows
-from ..utils import check_MAXlikecomp
-from ..base import MAXSpecie, MAXSpecies, Pandasutils
-from ..utils import sortfuncchemsys
 from utils_asedatabase import assertrowslen
+
+from MAX_prediction.Database import SearchEnginenewapi, SearcherdB
+from MAX_prediction.Database import converttoformula_chemsysrows
+from MAX_prediction.base import MAXSpecie, MAXSpecies, Pandasutils
+from MAX_prediction.core.specie import CoreSpecie
+from MAX_prediction.core.species import Species
+from MAX_prediction.elements import Elements
+from MAX_prediction.utils import check_MAXlikecomp
+from MAX_prediction.utils import sortfuncchemsys
 
 
 def get_elements_chemical_systems(chemical_systems:list):
@@ -25,15 +28,31 @@ def get_elements_chemical_systems(chemical_systems:list):
 
 
 class MXeneSpecie(CoreSpecie):
-    def __init__(self, formula: str, parentmax=None, verbosity: int = 1):
+
+    def __init__(self, formula: str, parentmax=None, termination:str=None, verbosity: int = 1):
         super(MXeneSpecie, self).__init__(formula=formula)
         self._composition = None
         self._elements = None
         self._max = None
+        self._term = None
+
         self.formula = formula
         if parentmax:
             self.max = parentmax
+
+        if termination:
+            self.term = termination
         self.verbosity = verbosity
+
+
+    def __repr__(self):
+        st = "{}".format(self.formula)
+        if self.max:
+            st += f", {self.max}"
+        if self.term:
+            st += f", term={self.term}"
+        return "{0}({1})".format(MXeneSpecie.__name__, st)
+
 
     @property
     def formula(self):
@@ -60,13 +79,37 @@ class MXeneSpecie(CoreSpecie):
     def max(self, value):
         self._max = MAXSpecie(value)
 
+    @property
+    def term(self):
+        return self._term
+    
+    @term.setter
+    def term(self, value):
+        Composition(value)
+        self._term = value
 
 class MXeneSpecies(MAXSpecies):
+    coresp = MXeneSpecie
+    def __init__(self, formulas, parentmax=None, termination=None):
+        """ An object for handling a collection of MXene species.
 
-    def __init__(self, formulas, parentmax=None):
+        :param formulas: (list, tuple, required),  mxene formulas or MXeneSpecie
+        :param parentmax: (list, tuple, optional), formulas of parent max,
+        :param termination:(list, tuple, optional), chemical termination.
+        """
         super(MXeneSpecies, self).__init__(formulas=formulas)
-        if parentmax:
+        if parentmax is not None:
             self.setmax(maxformulas=parentmax)
+        if termination is not None:
+            self.setterm(term=termination)
+
+
+    def __repr__(self):
+        st = "{}".format(self.formula)
+        maxformulas = self.get_maxformula
+        if maxformulas:
+            st += f", maxspecies={maxformulas}"
+        return "{0}({1})".format(MXeneSpecies.__name__, st)
 
     @property
     def formula(self):
@@ -74,7 +117,7 @@ class MXeneSpecies(MAXSpecies):
 
     @formula.setter
     def formula(self, value):
-        if all([isinstance(v, MAXSpecie) for v in value]):
+        if all([isinstance(v, MXeneSpecie) for v in value]):
             formula = [v.formula for v in value]
             self._composition = value
             self._formula = np.asarray(formula)
@@ -88,17 +131,36 @@ class MXeneSpecies(MAXSpecies):
     def get_maxcompos(self):
         return [specie.max for specie in self.composition]
 
+    @cached_property
     def get_maxformula(self):
         return [specie.max.formula for specie in self.composition]
+
+    def get_maxmxeneformula(self):
+        """Generates MXene_MAX formulas"""
+        return ["{}_{}".format(mx, maxp) for mx,maxp in zip(self.formula, self.get_maxformula())]
 
     def setmax(self, maxformulas: list or tuple):
         for specie, f in zip(self.composition, maxformulas):
             specie.max = f
 
+    def setterm(self, term: list or tuple):
+        self._set_coresp_attribute(attribute_name="term", attribute_lst=term)
+
+    def _set_coresp_attribute(self, attribute_name: str , attribute_lst: list or tuple,):
+        for specie, attr in zip(self.composition, attribute_lst):
+            setattr(specie, attribute_name, attr)
+
     def get_dict_energy_mxene(self):
         energies = {f"{specie.formula}_{specie.max.formula}": specie.energy_per_formula for specie in self.composition}
         return energies
 
+    def select_maxph(self, maxformula:str):
+
+        index = np.where(self.get_maxformula == np.asarray(maxformula))[0]
+        if index.size == 0:
+            raise ValueError("No mxene of max formula {} found".format(maxformula))
+
+        return self[index]
 
 class SidephasesCore(Species):
 
@@ -317,7 +379,9 @@ class Sidephases(SidephasesCore): # this class could be problem specific
     def setup_mongo(self, chemical_systems):
         docs, missing_chemsys = self.get_docs_chemical_systems_in_mongodb(chemsys=chemical_systems,
                                                                           sort_by_e_above_hull=True)
-        print("Missing_chemsys (from Mongdb are):\n{}".format(missing_chemsys))
+        # print("Missing_chemsys (from Mongdb are):\n{}".format(missing_chemsys)) # the parentclass is alreading
+        # outputing the missing chemical systems, no need
+        # to print them again here
         self.set_from_docs(docs)
         self.to_dataframe_entries()
 
@@ -401,9 +465,13 @@ class SidephaseMAX(MAXSpecies, Sidephases):
 
 class NewElements(NewElements):  # customized user defined classes to implement specific functions.
 
-    def get_set_elementalrows(self, dummyrows):
+    def get_set_elementalrows(self, dummyrows:dict={}):
         elrows = self.search_in_asedb()
-        elrows.update(dummyrows)
+
+        if dummyrows:
+            warnings.warn("Dummy rows was provided: {}".format(dummyrows))
+            elrows.update(dummyrows)
+
         assertrowslen(elrows)
         self.set_rows(elrows)
         return elrows
@@ -412,7 +480,10 @@ class NewElements(NewElements):  # customized user defined classes to implement 
         self.to_dataframe_entries()
 
     def setup_mongo_elements(self, config):
+        from MAX_prediction.io.utils import filter_lowesten_mongodb_entries
         self.connect_mongo(**config)  # get the Mongodb elements
         elentries = self.search_in_mpdb()
+        # here we sort them based and select the lowest energy element entry...
+        filter_lowesten_mongodb_entries(elentries, warn=True)
         assertrowslen(elentries)
         self.set_entries(elentries)

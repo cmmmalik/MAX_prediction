@@ -1,5 +1,8 @@
+import warnings
 import h5py
 import numpy as np
+
+from MAX_prediction.analysis.mxene import MXeneAnalyzers_beta
 
 
 class ReactionsLogger:
@@ -129,4 +132,107 @@ class ReactionsLogger:
         return reaction_list
 
 
+class HDF5LoggerCollections:
+
+    def __init__(self, file, obj: MXeneAnalyzers_beta):
+        assert isinstance(obj, MXeneAnalyzers_beta)
+        self._logger = None
+        self.obj = obj
+        self.file = file
+        self._set_logger()
+
+    def _set_logger(self):
+        self._logger = ReactionsLogger(self.file)
+
+    def save_to_hdfile_index(self, index, colnames=None, overwrite=False):
+        """saves the reaction into hdf5 file. The colname are the names of the reactions as used in lyzer. for example mxenes, Tmxenes, The full folder in terms of
+        hdf5 hiearchy is as 'maxphase/colname'. The colname then contains dataset for each reaction.
+        It is an upgrade from pickle file that does not allow any possible search of a phase.
+
+        Args:
+            index (int): the index of the phase to be saved.
+            colnames (_type_, optional): _description_. Defaults to None.
+
+        Raises:
+            ex: _description_
+        """
+        lyzer = self.obj.analyzers[index]
+
+        if not lyzer.outputs:
+            warnings.warn(f'The output of : {index} is empty')
+            return
+        if not colnames:
+            colnames = lyzer.outputs.keys()  # each key will be a group which will contain dataset of reactions...e.g. MAXphase/mxenes/Reactions_{} or MAXphase/Tmxenes/Reactuibs:{}
+
+        maxphase = lyzer.max.formula
+        logger = self._logger
+
+        with h5py.File(logger.file, 'a') as logger._hdffile:
+
+            if maxphase not in logger._hdffile:
+                logger._hdffile.create_group(maxphase)
+
+            for col in colnames:
+                fcol = f'{maxphase}/{col}'
+                if fcol in logger._hdffile:
+                    if overwrite:
+                        warnings.warn(f"The {fcol} is already present:( I will skip)")
+                        continue
+                    else:
+                        warnings.warn(
+                            f"You opted for overwriting, deleting the group and will create a new group: {fcol}")
+                        del logger._hdffile[fcol]
+                else:
+                    logger._hdffile.create_group(fcol)
+                logger.save_data(phasename=fcol, reaction_list=lyzer.outputs[col])
+
+    def save_to_hdfile(self, colnames=None, overwrite=False):
+
+        nested = False
+        if isinstance(colnames, (list, tuple)):
+            if isinstance(colnames[0], (list, tuple)):
+                assert len(colnames) == len(self.obj.analyzers)
+                nested = True
+
+        for index in range(len(self.obj.analyzers)):
+            self.save_to_hdfile_index(index=index,
+                                      colnames=colnames[index] if nested else colnames,
+                                      overwrite=overwrite)
+
+    def read_from_hdffile(self, colnames=None):
+        nested = False
+        if isinstance(colnames, (list, tuple)):
+            if isinstance(colnames[0], (list, tuple)):
+                assert len(colnames) == len(self.obj.analyzers)
+                nested = True
+
+        for index in range(len(self.obj.analyzers)):
+            self.read_from_hdffile_index(index=index,
+                                         colnames=colnames[index] if nested else colnames)
+
+    def read_from_hdffile_index(self, index, colnames=None):
+
+        lyzer = self.obj.analyzers[index]
+
+        maxphase = lyzer.max.formula
+        logger = self._logger
+
+        if not os.path.exists(logger.file):
+            raise FileNotFoundError('The file={} is not present'.format(logger.file))
+
+        outputs = {}
+
+        if not colnames:
+            colnames = self.obj.output_keys
+
+        with h5py.File(logger.file, 'r') as logger._hdffile:
+            if maxphase not in logger._hdffile:
+                raise ValueError(
+                    f"The reaction data for  maxphase({maxphase}) does not exist in the file({logger.file})")
+
+            for col in colnames:
+                fcol = f'{maxphase}/{col}'
+                outputs[col] = logger.read_data_tuple(phasename=fcol)
+
+        lyzer.outputs = outputs
 

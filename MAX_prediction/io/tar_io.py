@@ -2,6 +2,7 @@ import os
 import shutil
 from tarfile import TarFile
 import pathlib
+import warnings
 
 
 def remove_suffixes(filename):
@@ -49,11 +50,18 @@ class TarLogger:
         # for this we have to extrac the whole folder and then append the directory... (over-write will happen)
         # extract the existing to a tmp directory...
 
-        for f in files:
-            if os.path.exists(os.path.join(tmpdirectory, f)):
+        for of in files:
+            f = pathlib.Path(of)
+            extf = pathlib.Path(tmpdirectory) / f.name
+            if extf.exists():
                 if safe:
-                    raise RuntimeError("File is existing with the name already. do you want to override,"
+                    raise RuntimeError(f"File: {f.name} is existing with the name already. do you want to override,"
                                        "if yes, run with safe=False")
+
+                else:
+                    warnings.warn(f"File: {of} is exiting already, but will be overwritten")
+                    extf.unlink(missing_ok=False) # first remove the file in the subdirectory...
+            # move the file back to the main tmp folder...
 
         newtarfile = self.get_unique_name()
         shutil.move(self.tarfile, newtarfile)

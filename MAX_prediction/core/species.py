@@ -5,12 +5,12 @@ from mse.ext.materials_project import SmartMPRester
 from pandas import DataFrame
 from pymatgen.core import Composition
 
-from ..utils import Genchemicalsystems
+from MAX_prediction.utils import Genchemicalsystems
 from .specie import CoreSpecie
 
 
 class CoreSpecies:
-
+    coresp = CoreSpecie
     def __init__(self, formulas: list or tuple or np.ndarray):
         self.formula = formulas
 
@@ -22,10 +22,17 @@ class CoreSpecies:
         return self.__repr__()
 
     def __getitem__(self, index):
-        if isinstance(index, int):
-            return self._composition[index]
+        if not isinstance(index, str):
+            try:
+                item = self._composition[index]
+            except TypeError:
+                item = [self._composition[i] for i in index]
+            return item if not isinstance(item, (list, tuple)) else self.__class__(item)
 
         return self._find_from_name(index)
+
+    def __len__(self):
+        return len(self.formula)
 
     def __delitem__(self, key):
         def _delete(index):
@@ -47,7 +54,7 @@ class CoreSpecies:
 
         index = self.find_index_name(index)
         if len(index) > 1:
-            return [self._composition[i] for i in index]
+            return self.__class__([self._composition[i] for i in index])
 
         return self._composition[index[0]]
 
@@ -63,8 +70,13 @@ class CoreSpecies:
 
     @formula.setter
     def formula(self, value: list or tuple or np.ndarray):
-        self._composition = [CoreSpecie(i) for i in value]
-        self._formula = np.asarray(value)
+        if all([isinstance(v, self.coresp) for v in value]):
+            formula = [v.formula for v in value]
+            self._composition = value
+            self._formula = np.asarray(formula)
+        else:
+            self._composition = [self.coresp(i) for i in value]
+            self._formula = np.asarray(value)
 
     @property
     def composition(self):
