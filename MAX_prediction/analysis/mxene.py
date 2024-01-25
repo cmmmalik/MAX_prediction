@@ -80,6 +80,19 @@ def open_uprectants(df):
     return concat([df.reset_index(), pseudoreactant], axis=1)
 
 
+class Parallelbalance:
+    """
+    A handler class for parallel enumeration over possible reactions. The actualfunc should be provided to the
+    imap.
+    """
+
+    def __init__(self, reactants, solvers_check) -> None:
+        self.func = partial(MXeneBase._balance, reactants=reactants, solvers_check=solvers_check)
+
+    def actualfunc(self, iprod):
+        return self.func(i=iprod[0], product=iprod[1])
+
+
 class MXeneBase:
 
     output_keys = ['mxenes', 'Tmxenes', 'sidereactions', 'side2reactions']
