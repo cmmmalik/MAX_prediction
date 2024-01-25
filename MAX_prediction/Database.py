@@ -365,6 +365,9 @@ class Entry:
 
     def __str__(self):
         self._entry.__str__()
+    
+    def __eq__(self, __value: object) -> bool:
+        self._entry.__eq__()
 
     @property
     def entry(self):
