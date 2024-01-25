@@ -1,25 +1,24 @@
 import os
 import pickle
 import warnings
-from itertools import chain as itchain
 from functools import partial
+from itertools import chain as itchain
+from multiprocessing import Pool
 
 import numpy as np
 from chempy import balance_stoichiometry
 from colorama import Fore
-from pandas import DataFrame, concat
-from pymatgen.core.periodic_table import Element as pymatElement
-from pymatgen.core import periodic_table
-from multiprocessing import Pool
-from MAX_prediction.analysis.specifics import MXeneSpecie, Sidephases
 from mse.analysis.chemical_equations import equation_balancer_v2
+from pandas import DataFrame, concat
+from pymatgen.core import periodic_table
+from pymatgen.core.periodic_table import Element as pymatElement
 
-from .chemical_reactions import Balance, calculate_reaction_energy
-from MAX_prediction.utils import Genchemicalsystems
-from MAX_prediction.core.species import Species
-from .specifics import MXeneSpecie, MXeneSpecies, Sidephases, NewElements
-from .specifics import MAXSpecies
 from MAX_prediction.base import MAXSpecie, combine_compounds_multisize
+from MAX_prediction.core.species import Species
+from MAX_prediction.utils import Genchemicalsystems
+from .chemical_reactions import Balance, calculate_reaction_energy
+from .specifics import MAXSpecies
+from .specifics import MXeneSpecie, MXeneSpecies, Sidephases, NewElements
 
 
 # from IPython.display import Markdown
