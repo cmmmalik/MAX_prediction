@@ -240,7 +240,7 @@ class MXeneBase:
         assert len(reactions) == len(reactions2_solver)
         if mergesolvers:
             warnings.warn("Reactions from both solvers are merged into a single list,", UserWarning)
-            reactions = list(filter(lambda x: x[0] if x[0] else x[1], zip(reactions, reactions2_solver))
+            reactions = list(filter(lambda x: x[0] if x[0] else x[1], zip(reactions, reactions2_solver)))
         return reactions
 
 
