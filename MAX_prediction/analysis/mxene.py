@@ -623,6 +623,7 @@ class MultiTermMXenReactions(MXeneReactions):
         energy = {tmxene.formula: tmxene.energy_per_formula for tmxene in self.tmxenes}
         assert len(energy) == len(self.tmxenes)
         return energy
+
     def get_energies(self):
         mxene_en, tmxene_en, max_en = super().get_energies(self)
         assert tmxene_en is None
@@ -1143,8 +1144,6 @@ class MXeneAnalyzerbetav1(MXeneReactions, MXeneSidephaseReactions):
 
     def _get_reaction_energies_mxenes(self, energies_, en_sp, tipe="mxenes"):
         for reac in self.outputs[tipe]:
-            append_dict1_dict2_exclusive(energies_,en_sp, reac[-1].keys(), exclude=[self.mxene.formula,
-                                                                                    self.tmxene.formula])
             append_dict1_dict2_exclusive(energies_, en_sp, reac[-1].keys(), exclude=[self.mxene.formula,
                                                                                      self.tmxene.formula])
             # exclude both BAre and Terminatec
@@ -1655,10 +1654,9 @@ class MultiTermMXeneAnalyzersBase(MXenesAnalyzersBase):
 
         self.termination = termination
 
-    def _setup_(self, mxenes, Tmxenes, maxes, termination,  nproc=None,):
-        try:
-            assert len(mxenes) == int(len(Tmxenes)/len(termination)) == len(maxes)
     def _setup_(self, mxenes, Tmxenes, maxes, nproc=None, ):
+        assert len(mxenes) == len(maxes)
+        # get all the MXenes which have same MAX phase..
 
             analyzers = [MXeneAnalyzerbetav1(mxene=mxco,
                                              competing_phases=Sidephases([]),
