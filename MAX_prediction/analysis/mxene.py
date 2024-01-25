@@ -229,6 +229,21 @@ class MXeneBase:
 
         return reactions, reactions_2solver
 
+    @classmethod
+    def _paralleliter_balance_(cls, productiter, reactants, solvers_check=True, verbosity: int = 1, nproc: int = 1,
+                               mergesolvers=True):
+
+        funcobj = Parallelbalance(reactants=reactants, solvers_check=solvers_check)  # partial function quantities
+        with Pool(nproc) as mp:
+            reactions, reactions2_solver = list(mp.imap(func=funcobj.actualfunc, iterable=productiter))
+
+        assert len(reactions) == len(reactions2_solver)
+        if mergesolvers:
+            warnings.warn("Reactions from both solvers are merged into a single list,", UserWarning)
+            reactions = list(filter(lambda x: x[0] if x[0] else x[1], zip(reactions, reactions2_solver))
+        return reactions
+
+
 class MXeneReactions(MXeneBase):
 
     def __init__(self,
