@@ -94,7 +94,6 @@ class Parallelbalance:
 
 
 class MXeneBase:
-
     output_keys = ['mxenes', 'Tmxenes', 'sidereactions', 'side2reactions']
 
     def __init__(self,
