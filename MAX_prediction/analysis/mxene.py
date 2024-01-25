@@ -192,7 +192,7 @@ class MXeneBase:
         return Balance.calculate_reaction_enthalpies(reactions=reactions, energies=energies, verbosity=verbosity)
 
     @classmethod
-    def _get_reactions(cls, i, reactants, products, solvers_check=True, verbosity:int=1):
+    def _get_reactions(cls, i, reactants, products, solvers_check=True, verbosity: int = 1):
 
         if verbosity >= 2:
             print("product from enumeration: {}".format(products))
