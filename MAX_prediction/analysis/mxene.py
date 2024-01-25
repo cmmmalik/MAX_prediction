@@ -507,7 +507,7 @@ class MultiTermMXenReactions(MXeneReactions):
         if not isinstance(value, MXeneSpecies):
             raise TypeError(f"Expected an instance of {MXeneSpecie.__name__}, but got {type(value)}")
 
-        self._tmxene = value
+        self._tmxenes = value
 
     def get_mxene_reaction_enumerate(self,
                                      tipe="mxene",
