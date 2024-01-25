@@ -3,6 +3,8 @@ from ase.db.row import AtomsRow
 from pymatgen.core import Composition
 from pymatgen.entries.computed_entries import ComputedEntry, ComputedStructureEntry
 
+from MAX_prediction.Database import Row, Entry
+
 
 class CoreSpecie:
 
@@ -115,4 +117,4 @@ class CoreSpecie:
         :return:
         """
         en = self.row.energy_per_atom
-        return en*Composition(self.formula).num_atoms
+        return en * Composition(self.formula).num_atoms
