@@ -649,6 +649,9 @@ class MXeneSidephaseReactions(MXeneBase):
         maxsize, els = self.get_number_allowed_products()
         sizelimits = list(range(1, maxsize + 1))
 
+        if self.verbosity >= 1:
+            print("Size limits for the combination sizes is: {}".format(sizelimits))
+
         gen_iterproducts = generate_iter_products()
 
         if not self.nproc:
