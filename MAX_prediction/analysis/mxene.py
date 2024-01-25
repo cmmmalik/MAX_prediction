@@ -97,12 +97,12 @@ class MXeneBase:
     output_keys = ['mxenes', 'Tmxenes', 'sidereactions', 'side2reactions']
 
     def __init__(self,
-                 mxene:MXeneSpecie, # Unterminated MXene
-                 competing_phases: Sidephases=None,
-                 solution: Species=None,
-                 parentmax:MAXSpecie = None,
-                 verbosity:int = 1,
-                 nproc:int=None):
+                 mxene: MXeneSpecie,  # Unterminated MXene
+                 competing_phases: Sidephases = None,
+                 solution: Species = None,
+                 parentmax: MAXSpecie = None,
+                 verbosity: int = 1,
+                 nproc: int = None) -> object:
         """
         Base class for MXene analyzers, not expected  to be used directly.
         :param mxene:
