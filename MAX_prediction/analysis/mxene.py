@@ -188,7 +188,7 @@ class MXeneBase:
         return eq1coeffs, eq2coeffs
 
     @staticmethod
-    def _calculate_reaction_enthalpies(reactions, energies, verbosity:int=1):
+    def _calculate_reaction_enthalpies(reactions, energies, verbosity: int = 1):
         return Balance.calculate_reaction_enthalpies(reactions=reactions, energies=energies, verbosity=verbosity)
 
     @classmethod
