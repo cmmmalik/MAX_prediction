@@ -22,7 +22,7 @@ from .specifics import MXeneSpecie, MXeneSpecies, Sidephases, NewElements
 
 
 # from IPython.display import Markdown
-#ToDO: shift/move this specific implementatins to a separate package.
+# ToDO: shift/move this specific implementatins to a separate package.
 
 def copy_append_dict(dct: dict, newdct: dict):
     for k in newdct:
