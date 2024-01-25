@@ -95,7 +95,7 @@ class MAXSpecie(CoreSpecie):
 
 
 class MAXSpecies(Species):
-
+    coresp = MAXSpecie
     def __init__(self, formulas: list or tuple or np.array, establish_connection: bool = False, host: str = "localhost",
                  port: int = 2707, database: str = None, client=None, collection_name: str = None,
                  verbosity: int = 1):
@@ -115,7 +115,7 @@ class MAXSpecies(Species):
     def formula(self, value):
         if (np.unique(value) != np.sort(value)).all():
             raise ValueError("formulas contain duplicates")
-        self._composition = [MAXSpecie(i) for i in value]
+        self._composition = [self.coresp(i) for i in value]
         self._formula = np.asarray(value)
 
     # @property
