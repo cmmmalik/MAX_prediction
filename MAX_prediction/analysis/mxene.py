@@ -351,7 +351,6 @@ class MXeneReactions(MXeneBase):
         if return_df:
             return reactions, DataFrame(reactions, columns=["reactants", "products"])
         return reactions
-    
 
     def get_mxene_reaction_enumerate(self,
                                      tipe="mxene",
@@ -374,19 +373,18 @@ class MXeneReactions(MXeneBase):
                                                                     combination_size=sizelimits,
                                                                     necessary=None,
                                                                     subset=pseduels)):
-
                 yield i, [mxene.formula] + list(product)
 
         reactants = [self.max.formula] + self.solution.formula.tolist()
         maxsize, els = self.get_number_allowed_products()
-        sizelimits = list(range(1, maxsize+1))
+        sizelimits = list(range(1, maxsize + 1))
 
         reactions = []
         reactions_2solver = []
         sphase = self.competing_phases.df.phase
 
         print("No. of phases originally= {}".format(len(sphase)))
-        sphase = sphase[(sphase != self.mxene.formula) & (sphase != self.tmxene.formula)] # unterminated MXene
+        sphase = sphase[(sphase != self.mxene.formula) & (sphase != self.tmxene.formula)]  # unterminated MXene
         sphase = sphase[~sphase.isin(reactants)]
         print("No. of phases after (removing MXene and T-MXene compositions): {}".format(len(sphase)))
 
@@ -438,11 +436,12 @@ class MXeneReactions(MXeneBase):
 
     def get_reactions_enumerate(self):
         for key, tipe in zip(["mxenes", "Tmxenes"], ["mxene", "tmxene"]):
-            reactions1, reaction2solver = self.get_mxene_reaction_enumerate(tipe=tipe,return_df=False,allow_all=True)
+            reactions1, reaction2solver = self.get_mxene_reaction_enumerate(tipe=tipe, return_df=False, allow_all=True)
             if reaction2solver:
                 reactions1 += reaction2solver
 
             self.outputs[key] = reactions1
+
     @property
     def get_mxene_en(self):
         return {self.mxene.formula: self.mxene.energy_per_formula}
@@ -453,7 +452,7 @@ class MXeneReactions(MXeneBase):
 
     @property
     def get_max_en(self):
-        return {self.max.formula:self.max.energy_per_formula}
+        return {self.max.formula: self.max.energy_per_formula}
 
     def get_energies(self):
         mxene_en = self.get_mxene_en
@@ -470,13 +469,13 @@ class MXeneReactions(MXeneBase):
 
 class MultiTermMXenReactions(MXeneReactions):
 
-    def __init__(self, 
+    def __init__(self,
                  mxene: MXeneSpecie,
-                 competing_phases: Sidephases, 
-                 solution: Species, 
-                 parentmax: MAXSpecie = None, 
-                 verbosity: int = 1, 
-                 tmxenes: MXeneSpecies = None, # allow for multiple MXeneSpecies, instead of just one
+                 competing_phases: Sidephases,
+                 solution: Species,
+                 parentmax: MAXSpecie = None,
+                 verbosity: int = 1,
+                 tmxenes: MXeneSpecies = None,  # allow for multiple MXeneSpecies, instead of just one
                  nproc=None):
         """
         Difference between this and MXeneReactions is of termination handling. This class includes termination as well
@@ -491,7 +490,7 @@ class MultiTermMXenReactions(MXeneReactions):
         :param tmxenes:
         :param nproc:(int, default, None), number of processors for parallel processing of finding out the reactions
         """
-        
+
         super().__init__(mxene, competing_phases, solution, parentmax, verbosity, tmxene=None, nproc=nproc)
         self._tmxenes = None
 
@@ -502,14 +501,13 @@ class MultiTermMXenReactions(MXeneReactions):
     @property
     def tmxenes(self):
         return self._tmxenes
-    
+
     @tmxenes.setter
-    def tmxenes(self, value:MXeneSpecies):
+    def tmxenes(self, value: MXeneSpecies):
         if not isinstance(value, MXeneSpecies):
             raise TypeError(f"Expected an instance of {MXeneSpecie.__name__}, but got {type(value)}")
-        
-        self._tmxene = value
 
+        self._tmxene = value
 
     def get_mxene_reaction_enumerate(self,
                                      tipe="mxene",
@@ -524,12 +522,12 @@ class MultiTermMXenReactions(MXeneReactions):
         :return:
         """
 
-        if tipe=="mxene":
+        if tipe == "mxene":
             mxene = getattr(self, tipe)
             return self._get_mxene_reaction_enumerate(mxene=mxene,
                                                       return_df=return_df,
                                                       allow_all=allow_all)
-        else: # we have to iterate over all the terminations..
+        else:  # we have to iterate over all the terminations..
             reactions = []
             reactions2solver = []
             termlengths = {}
@@ -544,9 +542,9 @@ class MultiTermMXenReactions(MXeneReactions):
             return reactions, reactions2solver
 
     def _get_mxene_reaction_enumerate(self,
-                                     mxene=None,
-                                     return_df=False,
-                                     allow_all: bool = False):
+                                      mxene=None,
+                                      return_df=False,
+                                      allow_all: bool = False):
 
         """Gets all possible reactions by including all possible side phases as byproduct in the MXene synthesis reaction.
 
@@ -564,7 +562,6 @@ class MultiTermMXenReactions(MXeneReactions):
                                                                     combination_size=sizelimits,
                                                                     necessary=None,
                                                                     subset=pseduels)):
-
                 yield i, [mxene.formula] + list(product)
 
         reactants = [self.max.formula] + self.solution.formula.tolist()
@@ -862,7 +859,7 @@ class MXeneAnalyzer:
 
     def get_mxene_reaction_enumerate(self, return_df=False, nproc=None):
 
-        def internal_balance(i,product):
+        def internal_balance(i, product):
 
             if self.verbosity >= 2:
                 print("product from enumeration: {}".format(product))
@@ -887,7 +884,7 @@ class MXeneAnalyzer:
 
         mxene_els = self.mxene.elements.unique_elements()
         pseduels = [i for i in els if i not in mxene_els]
-        if self.verbosity >=2:
+        if self.verbosity >= 2:
             print("pseduels els (subset): {}".format(pseduels))
         gen_iter = enumerate(combine_compounds_multisize(sphase,
                                                         combination_size=sizelimits,
@@ -912,7 +909,7 @@ class MXeneAnalyzer:
 
         else:
             with Pool(nproc) as mp:
-                reactions, reactions_2solver = mp.imap(func=internal_balance,iterable=gen_iter, chunksize=4)
+                reactions, reactions_2solver = mp.imap(func=internal_balance, iterable=gen_iter, chunksize=4)
                 # filter here.
                 reactions = list(filter(bool, reactions))
                 reactions_2solver = list(filter(bool, reactions_2solver))
@@ -930,12 +927,12 @@ class MXeneAnalyzer:
                  solvers_check=True):
 
         eq1coeffs, eq2coeffs = Balance(reactants=reactants, product=product).balance(solvers_check=solvers_check)
-        if eq1coeffs or  eq2coeffs:
+        if eq1coeffs or eq2coeffs:
             print(f"Balanced: {i}")
 
         return eq1coeffs, eq2coeffs
 
-    def _get_reactions(self,i, reactants, products, solvers_check=True):
+    def _get_reactions(self, i, reactants, products, solvers_check=True):
 
         if self.verbosity >= 2:
             print("product from enumeration: {}".format(products))
@@ -974,7 +971,6 @@ class MXeneAnalyzer:
                 # filter here.
                 reactions = list(filter(bool, reactions))
                 reactions_2solver = list(filter(bool, reactions_2solver))
-
 
         # for i, product in enumerate(combine_compounds_multisize(self.competing_phases.df.phase,
         #                                                         combination_size=sizelimits,
@@ -1055,19 +1051,19 @@ class MXeneAnalyzer:
         mxene_en = {mxene.formula: mxene.energy_per_formula, }
         energies_sp = dict(zip(cp_df["phase"], cp_df["total_energy_per_formula"]))
 
-        return {"mxene": mxene_en, "energies_sp":energies_sp}
+        return {"mxene": mxene_en, "energies_sp": energies_sp}
 
 
 class MXeneAnalyzerbetav1(MXeneReactions, MXeneSidephaseReactions):
 
-    def __init__(self, mxene:MXeneSpecie,
-                 competing_phases:Sidephases,
-                 molenergies:dict,
-                 solution:Species,
-                 parentmax:MAXSpecie=None,
-                 tmxene:MXeneSpecie=None,
+    def __init__(self, mxene: MXeneSpecie,
+                 competing_phases: Sidephases,
+                 molenergies: dict,
+                 solution: Species,
+                 parentmax: MAXSpecie = None,
+                 tmxene: MXeneSpecie = None,
                  etchant_energies: dict = {},
-                 verbosity: int=1,
+                 verbosity: int = 1,
                  nproc=None):
         """
         First stable implementation of MXeneAnalyzer, This should be used for a single type of termination. If multiple
@@ -1118,7 +1114,7 @@ class MXeneAnalyzerbetav1(MXeneReactions, MXeneSidephaseReactions):
         else:
             MXeneReactions.get_reactions_enumerate(self)
 
-        sidereactions, side2reactions = MXeneSidephaseReactions.get_reactions(self,solvers_check=solvers_check)
+        sidereactions, side2reactions = MXeneSidephaseReactions.get_reactions(self, solvers_check=solvers_check)
         self.outputs["sidereactions"] = sidereactions
         self.outputs["side2reactions"] = side2reactions
 
@@ -1149,12 +1145,14 @@ class MXeneAnalyzerbetav1(MXeneReactions, MXeneSidephaseReactions):
         for reac in self.outputs[tipe]:
             append_dict1_dict2_exclusive(energies_,en_sp, reac[-1].keys(), exclude=[self.mxene.formula,
                                                                                     self.tmxene.formula])
+            append_dict1_dict2_exclusive(energies_, en_sp, reac[-1].keys(), exclude=[self.mxene.formula,
+                                                                                     self.tmxene.formula])
             # exclude both BAre and Terminatec
         rdf = self._calculate_reaction_enthalpies(self.outputs[tipe], energies=energies_, verbosity=self.verbosity)
         rdf["type"] = "MXene"
         return rdf
 
-    def _get_sidephase_energies_(self, energies_reac, energies_sp, tipes:list):
+    def _get_sidephase_energies_(self, energies_reac, energies_sp, tipes: list):
         energies_ = copy_append_dict(energies_reac, energies_sp)
         df = DataFrame()
         for tipe in tipes:
@@ -1176,9 +1174,9 @@ class MXeneAnalyzerbetav1(MXeneReactions, MXeneSidephaseReactions):
         energies_reac = copy_append_dict(en_max, self.etchantenergies)
 
         outputkeys = self.outputs.keys()
-        df = DataFrame() # empty dataframe for saving the outputs..
+        df = DataFrame()  # empty dataframe for saving the outputs..
 
-        #exclude max from en_sp.
+        # exclude max from en_sp.
 
         en_sp.pop(self.max.formula, None)
 
@@ -1206,7 +1204,7 @@ class MultiTermMXeneAnalyzerbetav1(MXeneAnalyzerbetav1, MultiTermMXenReactions):
                  molenergies: dict,
                  solution: Species,
                  parentmax: MAXSpecie = None,
-                 tmxenes: MXeneSpecies = None, # assuming that the termination is part of tmxene.term
+                 tmxenes: MXeneSpecies = None,  # assuming that the termination is part of tmxene.term
                  etchant_energies: dict = {},
                  verbosity: int = 1,
                  nproc=None
@@ -1302,7 +1300,6 @@ class MXenesAnalyzers:
         maxphase = self.maxphases[index]
 
         assert maxphase.formula == mxene.max.formula and maxphase.formula == tmxene.max.formula
-
 
         max_en = {maxphase.formula: maxphase.energy_per_formula, }
         tmxene_en = {tmxene.formula: tmxene.energy_per_formula, }
@@ -1490,7 +1487,6 @@ class MXenesAnalyzers:
 
 
 class MXenesAnalyzersBase:
-
     output_keys = ['mxenes', 'Tmxenes', 'sidereactions', 'side2reactions']
 
     def __init__(self,
@@ -1550,7 +1546,7 @@ class MXenesAnalyzersBase:
     @logger.setter
     def logger(self, value):
         from MAX_prediction.io.tarpickle_io import PickleTarLoggerCollections
-        assert isinstance(value, PickleTarLoggerCollections) # either remove this check or import the class here,
+        assert isinstance(value, PickleTarLoggerCollections)  # either remove this check or import the class here,
         self._logger = value
 
     def set_side_phasesdf_index(self, index):
@@ -1568,8 +1564,8 @@ class MXenesAnalyzersBase:
             print("MAX: {}".format(lyzer.max.formula))
             print("Competing phases:\n{}".format(lyzer.competing_phases))
 
-    def _setup_(self, mxenes, Tmxenes, maxes,  nproc=None,):
-        assert len(mxenes) == len(Tmxenes) == len(maxes) # Todo: This does not work if this assertion is not satisfied
+    def _setup_(self, mxenes, Tmxenes, maxes, nproc=None, ):
+        assert len(mxenes) == len(Tmxenes) == len(maxes)  # Todo: This does not work if this assertion is not satisfied
         # for example, if we have different number of functionalized MXenes than baremxenes because we are considering
         # more than one type of termiantion at the surface..
 
@@ -1634,14 +1630,15 @@ class MXenesAnalyzersBase:
         DF = open_uprectants(DF)
         return DF
 
+
 class MultiTermMXeneAnalyzersBase(MXenesAnalyzersBase):
-    def __init__(self, 
+    def __init__(self,
                  mxenecomps: MXeneSpecies,
                  Tmxenecomps: MXeneSpecies,
                  maxphases: MAXSpecies,
                  sidephases: Sidephases,
                  solution: Species,
-                 termination:list or tuple,
+                 termination: list or tuple,
                  etchant_energies: dict = {},
                  verbosity: int = 1,
                  nproc=None):
@@ -1661,6 +1658,7 @@ class MultiTermMXeneAnalyzersBase(MXenesAnalyzersBase):
     def _setup_(self, mxenes, Tmxenes, maxes, termination,  nproc=None,):
         try:
             assert len(mxenes) == int(len(Tmxenes)/len(termination)) == len(maxes)
+    def _setup_(self, mxenes, Tmxenes, maxes, nproc=None, ):
 
             analyzers = [MXeneAnalyzerbetav1(mxene=mxco,
                                              competing_phases=Sidephases([]),
@@ -1743,6 +1741,3 @@ class MXeneAnalyzers_beta(MXenesAnalyzersBase):
 
             except Exception as ex:
                 print(f"Encountered Exception:\n{ex}")
-
-
-
