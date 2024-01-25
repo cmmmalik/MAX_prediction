@@ -271,7 +271,7 @@ class SearcherdB:
          
          # do  not mix list and 
         t_key = list(kwargs.keys())
-        if not isinstance(kwargs[t_key[0]], (tuple, list)):
+        if not t_key or not isinstance(kwargs[t_key[0]], (tuple, list)):
             for i,f in enumerate(formulas):
                 rrows = self.get_formula(f, **kwargs)
                 fdict[f] = rrows
