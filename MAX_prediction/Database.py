@@ -288,6 +288,14 @@ class Row:
     def __init__(self, row: AtomsRow):
         self._row = row
 
+    def __eq__(self, obj: object) -> bool:
+
+        if self is obj:
+            return True
+        
+        # just compare the universal unique id...
+        return self.row.unique_id == obj.row.unique_id
+
     @property
     def row(self):
         return self._row
