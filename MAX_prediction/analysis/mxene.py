@@ -208,6 +208,27 @@ class MXeneBase:
     def _reactants_(self):
         return [self.max.formula] + [self.solution.formula.tolist()]
 
+    @classmethod
+    def _serialiter_balance_(cls, productiter, reactants, solvers_check=True, verbosity: int = 1):
+        reactions = []
+        reactions_2solver = []
+
+        for i, product in productiter:
+            if verbosity >= 2:
+                print("trying to balance:\n{}---->{}".format("+".join(reactants), "+".join(product)))
+
+            coeffs, coeffs_2balance = cls._balance(reactants=reactants,
+                                                   product=product,
+                                                   i=i,
+                                                   solvers_check=solvers_check)
+            if coeffs:
+                reactions.append(coeffs)
+
+            elif coeffs_2balance:
+                reactions_2solver.append(coeffs_2balance)
+
+        return reactions, reactions_2solver
+
 class MXeneReactions(MXeneBase):
 
     def __init__(self,
