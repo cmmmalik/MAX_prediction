@@ -9,7 +9,7 @@ import numpy as np
 from chempy import balance_stoichiometry
 from colorama import Fore
 from mse.analysis.chemical_equations import equation_balancer_v2
-from pandas import DataFrame, concat
+from pandas import DataFrame, concat, Series
 from pymatgen.core import periodic_table
 from pymatgen.core.periodic_table import Element as pymatElement
 
