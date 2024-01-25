@@ -35,7 +35,7 @@ def copy_append_dict(dct: dict, newdct: dict):
     return {**dct, **newdct}
 
 
-def update_dict_assert(dct:dict, newdict:dict):
+def update_dict_assert(dct: dict, newdict: dict):
     """Updating a dictionary (dct) with newdict, without avding any overwirting of key,value by explicitly asserting that
     a key is absent in the dct. Will raise Assertion error if a key in newdict is present in dct."""
 
@@ -54,7 +54,7 @@ def append_dict1_dict2_exclusive(dict1, dict2, keys, exclude=[]):
         dict1[key] = dict2[key]
 
 
-def copy_append_multiple_dicts(dct:dict, *dictargs):
+def copy_append_multiple_dicts(dct: dict, *dictargs):
     """returns a copy of a dictionary that is union of all the dictionaries provided. The order of keys present in the invidiual dictionaries
     is maintained in the new dictionary.
 
