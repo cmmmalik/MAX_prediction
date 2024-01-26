@@ -44,6 +44,9 @@ class Balance:
     def __init__(self, reactants, product):
         self.reactants = reactants
         self.products = product
+        self.verbosity = verbosity
+        if allow_reactant0:
+            self._allowzero = allow_reactant0
 
     def balance(self, solvers_check=True, verbosity:int=1):
         reactants = self.reactants
@@ -52,7 +55,7 @@ class Balance:
         eq1coeffs = None
         eq2coeffs = None
 
-        if verbosity >= 1:
+        if self.verbosity >= 2:
             print("trying to balance")
             print(f"{'+'.join(reactants)} -------> {'+ '.join(product)}")
         try:
@@ -67,10 +70,16 @@ class Balance:
             if neg_coef:
                 return None, None
 
+            if self.verbosity >= 1:
+                print("Balanced:")
+                print(coeffs)
             print()
             eq1coeffs = coeffs
         except (LinearlydependentMatrix, AssertionError) as e:
-            print(e)
+
+            if self.verbosity >= 1:
+                print(e)
+
             return None, None
         except Exception as ex:
             print(ex)
@@ -85,17 +94,22 @@ class Balance:
                     neg_coef = self._check_negative_coeffs(product_out=product_out, reactant_out=reactant_out)
                     if neg_coef:
                         return None, None
-                    print()
+
+                    print("Balanced by (2):")
+                    if self.verbosity >= 1:
+                        print(coeffs)
+
                     eq2coeffs = coeffs
                 except Exception as ex:
                     print(ex)
                     print(Fore.RED + "Couldn't balance by both solvers")
 
         if not eq2coeffs and not eq1coeffs:
-            print(
-                Fore.RED + "Reactions unbalanced by first solver '{}' are also unbalanced by second solver '{}'".format(
-                    equation_balancer_v2.__name__,
-                    balance_stoichiometry.__name__))
+            if self.verbosity >= 2:
+                print(
+                    Fore.RED + "Reactions unbalanced by first solver '{}' are also unbalanced by second solver '{}'".format(
+                        equation_balancer_v3.__name__,
+                        balance_stoichiometry.__name__))
 
         return eq1coeffs, eq2coeffs
 
@@ -105,7 +119,9 @@ class Balance:
         neg_coef = False
         for k, vv in itchain(reactant_out.items(), product_out.items()):
             if vv < 0:
-                print("Found negative Coefficient of {}:{}".format(k, vv))
+                if self.verbosity >= 2:
+                    print("Found negative Coefficient of {}:{}".format(k, vv))
+
                 neg_coef = True
         return neg_coef
 
