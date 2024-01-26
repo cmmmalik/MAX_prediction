@@ -140,6 +140,7 @@ class Balance:
         for chemeq in reactions:
             print(chemeq)
             en = {r: energies[r] for r in itchain(chemeq[0], chemeq[-1])}
+            assert len(en) == len(chemeq[0]) + len(chemeq[-1])
             En.append(en)
             deltaen = calculate_reaction_energy(reactants=chemeq[0], products=chemeq[-1], energies=en,
                                                 verbosity=verbosity)
