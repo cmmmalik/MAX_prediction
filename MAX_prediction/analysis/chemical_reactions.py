@@ -121,7 +121,7 @@ class Balance:
         neg_coef = False
         for k, vv in itchain(reactant_out.items(), product_out.items()):
             if vv < 0:
-                if self.verbosity >= 2:
+                if verbosity >= 2:
                     print("Found negative Coefficient of {}:{}".format(k, vv))
 
                 neg_coef = True
