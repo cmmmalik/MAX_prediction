@@ -498,6 +498,9 @@ class MultiTermMXenReactions(MXeneReactions):
             assert all([self.max.formula == tmxene.max.formula for tmxene in tmxenes])
             self.tmxenes = tmxenes
 
+        print("tmxenes:", self.tmxenes)
+        print("mxenes:", self.mxene)
+
     @property
     def tmxenes(self):
         return self._tmxenes
@@ -566,16 +569,28 @@ class MultiTermMXenReactions(MXeneReactions):
 
         reactants = [self.max.formula] + self.solution.formula.tolist()
         maxsize, els = self.get_number_allowed_products()
-        sizelimits = list(range(1, maxsize+1))
+        sizelimits = list(range(1, maxsize))
+        if self.verbosity >= 1:
+            print("Size limits for the combination sizes is: {}".format(sizelimits))
 
-        reactions = [] # output from solver 1
-        reactions_2solver = [] # output from solver 2
-        sphase = self.competing_phases.df.phase # get the competing phases ..
+        reactions = []  # output from solver 1
+        reactions_2solver = []  # output from solver 2
+        sphase = self.competing_phases.df.phase  # get the competing phases ..
 
-        print("No. of phases originally= {}".format(len(sphase)))
-        sphase = sphase[(sphase != self.mxene.formula) & (sphase != self.tmxene.formula)] # unterminated MXene
+        print("No. of phases originally(including all compositions)= {}".format(len(sphase)))
+        # add other terminated MXenes in the enumeration...
+        sphase = sphase[(sphase != self.mxene.formula) & (sphase != mxene.formula)]  # remove bare-MXene T-MXene
+
+        # adding other terminated MXenes # as part search of possible side products...
+        print("No. of phases after (removing Bare-MXene and T-MXene compositions): {}".format(len(sphase)))
         sphase = sphase[~sphase.isin(reactants)]
-        print("No. of phases after (removing MXene and T-MXene compositions): {}".format(len(sphase)))
+        print("No. of phases after removing reactant compositions= {}".format(len(sphase)))
+
+        sphase = concat([sphase, Series(np.append(self.mxene.formula, [self.tmxenes.formula]), name="phase")],
+                        axis=0, ignore_index=True)
+        print("No. of phases after (adding MXene and T-MXene compositions): {}".format(len(sphase)))
+
+        print("sphases are:\n{}".format(sphase))
 
         mxene_els = self.mxene.elements.unique_elements()  # unterminated Elements
 
@@ -587,29 +602,40 @@ class MultiTermMXenReactions(MXeneReactions):
         gen_iterproducts = generate_products()
         # for parallel processing, in case of nproc is provided
         if not self.nproc:
-            for i, product in gen_iterproducts:
-
-                if self.verbosity >= 2:
-                    print("product from enumeration: {}".format(product))
-
-                coeffs, coeffs_2balanc = self._balance(reactants=reactants,
-                                                       product=product,
-                                                       i=i,
-                                                       solvers_check=True)  # the two lists will be mutually exclusive.
-                if coeffs:
-                    reactions.append(coeffs)
-                elif coeffs_2balanc:
-                    reactions_2solver.append(coeffs_2balanc)
+            reactions, reactions_2solver = self._serialiter_balance_(productiter=gen_iterproducts,
+                                                                     reactants=reactants,
+                                                                     solvers_check=True,
+                                                                     verbosity=self.verbosity)
+            # for i, product in gen_iterproducts:
+            #
+            #     if self.verbosity >= 2:
+            #         print("product from enumeration: {}".format(product))
+            #
+            #     coeffs, coeffs_2balanc = self._balance(reactants=reactants,
+            #                                            product=product,
+            #                                            i=i,
+            #                                            solvers_check=True)  # the two lists will be mutually exclusive.
+            #     if coeffs:
+            #         reactions.append(coeffs)
+            #     elif coeffs_2balanc:
+            #         reactions_2solver.append(coeffs_2balanc)
 
         else:
-            func = partial(self._balance, reactants=reactants, solvers_check=True)
 
-            with Pool(self.nproc) as mp:
-                reactions, reactions_2solver = list(mp.imap(func=func, iterable=gen_iterproducts))
+            # funcobj = Parallelbalance(reactants=reactants, solvers_check=True)
+            #
+            #
+            # with Pool(self.nproc) as mp:
+            #     reactions, reactions_2solver = list(mp.imap(func=funcobj.actualfunc, iterable=gen_iterproducts))
+            #
+            # assert len(reactions) == len(reactions_2solver)
+            # warnings.warn("Reactions from both solvers are merged...", UserWarning)
+            # reactions = list(filter(lambda x: x[0] if x[0] else x[1], zip(reactions, reactions_2solver)))
 
-            assert len(reactions) == len(reactions_2solver)
-            warnings.warn("Reactions from both solvers are merged...", UserWarning)
-            reactions = list(filter(lambda x: x[0] if x[0] else x[1], zip(reactions, reactions_2solver)))
+            reactions = self._paralleliter_balance_(productiter=gen_iterproducts,
+                                                    reactants=reactants,
+                                                    solvers_check=True,
+                                                    nproc=self.nproc)
 
         if return_df:
             if reactions_2solver:
@@ -625,7 +651,7 @@ class MultiTermMXenReactions(MXeneReactions):
         return energy
 
     def get_energies(self):
-        mxene_en, tmxene_en, max_en = super().get_energies(self)
+        mxene_en, tmxene_en, max_en = super().get_energies()
         assert tmxene_en is None
         if self.tmxenes:
             tmxene_en = self.get_tmxene_en
@@ -655,71 +681,83 @@ class MXeneSidephaseReactions(MXeneBase):
         gen_iterproducts = generate_iter_products()
 
         if not self.nproc:
-            for i, product in gen_iterproducts:
-                print("trying to balance:\n{}---->{}".format("+".join(reactants), "+".join(product)))
-                # try:
-                #     _, coeffs = equation_balancer_v2(reactants=reactants,
-                #                                      products=product,
-                #                                      verbosity=0)
-                #
-                #     product_out = coeffs[-1]
-                #     reactant_out = coeffs[0]
-                #     neg_coef = Balance._check_negative_coeffs(product_out=product_out, reactant_out=reactant_out)
-                #     if neg_coef:
-                #         continue
-                #     print("Balanced: {}".format(i))
-                #     print(coeffs)
-                #     reactions.append(coeffs)
-                #     print()
-                # except (LinearlydependentMatrix, AssertionError) as e:
-                #     print(e)
-                #     continue
-                # except Exception as ex:
-                #     print("Error encountered by {}:{}".format(equation_balancer_v2.__name__, ex))
-                #     if solvers_check:
-                #         try:
-                #             coeffs = balance_stoichiometry(reactants=reactants, products=product, underdetermined=None)
-                #             product_out = coeffs[-1]
-                #             reactant_out = coeffs[0]
-                #             neg_coef = Balance._check_negative_coeffs(product_out=product_out, reactant_out=reactant_out)
-                #             if neg_coef:
-                #                 continue
-                #
-                #             print(Fore.BLUE + "the chempy solver balanced the reaction")
-                #             print("Balanced: {}".format(i))
-                #             print(coeffs)
-                #             reactions_2solver.append(coeffs)
-                #             print()
-                #         except Exception as ex:
-                #             print(ex)
-                #             print(Fore.RED + "Couldn't balance by both solvers")
+            reactions, reactions_2solver = self._serialiter_balance_(productiter=gen_iterproducts,
+                                                                     reactants=reactants,
+                                                                     solvers_check=solvers_check,
+                                                                     verbosity=self.verbosity)
 
-                coeffs, coeffs_2balance = self._balance(reactants=reactants,
-                                                        product=product,
-                                                        i=i,
-                                                        solvers_check=solvers_check)
+            print(Fore.RED + "Reactions unbalanced by first solver '{}' "
+                             "are also unbalanced by second solver '{}'".format(
+                equation_balancer_v2.__name__,
+                balance_stoichiometry.__name__))
+            # for i, product in gen_iterproducts:
+            #     print("trying to balance:\n{}---->{}".format("+".join(reactants), "+".join(product)))
+            # try:
+            #     _, coeffs = equation_balancer_v2(reactants=reactants,
+            #                                      products=product,
+            #                                      verbosity=0)
+            #
+            #     product_out = coeffs[-1]
+            #     reactant_out = coeffs[0]
+            #     neg_coef = Balance._check_negative_coeffs(product_out=product_out, reactant_out=reactant_out)
+            #     if neg_coef:
+            #         continue
+            #     print("Balanced: {}".format(i))
+            #     print(coeffs)
+            #     reactions.append(coeffs)
+            #     print()
+            # except (LinearlydependentMatrix, AssertionError) as e:
+            #     print(e)
+            #     continue
+            # except Exception as ex:
+            #     print("Error encountered by {}:{}".format(equation_balancer_v2.__name__, ex))
+            #     if solvers_check:
+            #         try:
+            #             coeffs = balance_stoichiometry(reactants=reactants, products=product, underdetermined=None)
+            #             product_out = coeffs[-1]
+            #             reactant_out = coeffs[0]
+            #             neg_coef = Balance._check_negative_coeffs(product_out=product_out, reactant_out=reactant_out)
+            #             if neg_coef:
+            #                 continue
+            #
+            #             print(Fore.BLUE + "the chempy solver balanced the reaction")
+            #             print("Balanced: {}".format(i))
+            #             print(coeffs)
+            #             reactions_2solver.append(coeffs)
+            #             print()
+            #         except Exception as ex:
+            #             print(ex)
+            #             print(Fore.RED + "Couldn't balance by both solvers")
 
-                if coeffs:
-                    reactions.append(coeffs)
-                elif coeffs_2balance:
-                    reactions_2solver.append(coeffs_2balance)
+            # coeffs, coeffs_2balance = self._balance(reactants=reactants,
+            #                                         product=product,
+            #                                         i=i,
+            #                                         solvers_check=solvers_check)
 
-            if reactions_2solver:
-                return reactions, reactions_2solver
+            # if coeffs:
+            #     reactions.append(coeffs)
+            # elif coeffs_2balance:
+            #     reactions_2solver.append(coeffs_2balance)
+
 
         else:
-            func = partial(self._balance, reactants=reactants, solvers_check=True)
+            reactions = self._paralleliter_balance_(productiter=gen_iterproducts,
+                                                    reactants=reactants,
+                                                    solvers_check=solvers_check,
+                                                    verbosity=self.verbosity,
+                                                    nproc=self.nproc,
+                                                    mergesolvers=True)
+            # func = partial(self._balance, reactants=reactants, solvers_check=True)
 
-            with Pool(self.nproc) as mp:
-                reactions, reactions_2solver = list(mp.imap(func, iterable=gen_iterproducts))
+            # with Pool(self.nproc) as mp:
+            #     reactions, reactions_2solver = list(mp.imap(func, iterable=gen_iterproducts))
+            #
+            # assert len(reactions) == reactions_2solver
+            # warnings.warn("Reactions from both solvers are merged...", UserWarning)
+            # reactions = list(filter(lambda x: x[0] if x[0] else x[1], zip(reactions, reactions_2solver)))
 
-            assert len(reactions) == reactions_2solver
-            warnings.warn("Reactions from both solvers are merged...", UserWarning)
-            reactions = list(filter(lambda x: x[0] if x[0] else x[1], zip(reactions, reactions_2solver)))
-
-        print(Fore.RED + "Reactions unbalanced by first solver '{}' are also unbalanced by second solver '{}'".format(
-            equation_balancer_v2.__name__,
-            balance_stoichiometry.__name__))
+        if reactions_2solver:
+            return reactions, reactions_2solver
 
         return reactions, None
 
@@ -891,12 +929,12 @@ class MXeneAnalyzer:
         if self.verbosity >= 2:
             print("pseduels els (subset): {}".format(pseduels))
         gen_iter = enumerate(combine_compounds_multisize(sphase,
-                                                        combination_size=sizelimits,
-                                                        necessary=None,
-                                                        subset=pseduels))
+                                                         combination_size=sizelimits,
+                                                         necessary=None,
+                                                         subset=pseduels))
         if not nproc:
 
-           for i, product in gen_iter:
+            for i, product in gen_iter:
                 # if self.verbosity >= 2:
                 #     print("product from enumeration: {}".format(product))
                 # product = [self.mxene.formula] + list(product)
@@ -961,7 +999,8 @@ class MXeneAnalyzer:
                                                    necessary=els)
         if not nproc:
             for i, product in lst_iterable:
-                coeffs, coeffs2 = self._get_reactions(i=i, reactants=reactants, products=product, solvers_check=solvers_check)
+                coeffs, coeffs2 = self._get_reactions(i=i, reactants=reactants, products=product,
+                                                      solvers_check=solvers_check)
 
                 if coeffs:
                     reactions.append(coeffs)
@@ -1059,6 +1098,7 @@ class MXeneAnalyzer:
 
 
 class MXeneAnalyzerbetav1(MXeneReactions, MXeneSidephaseReactions):
+    __clsmxenereac__ = MXeneReactions  # because we change this in the subclass, can also used __bases__[0]
 
     def __init__(self, mxene: MXeneSpecie,
                  competing_phases: Sidephases,
@@ -1084,14 +1124,14 @@ class MXeneAnalyzerbetav1(MXeneReactions, MXeneSidephaseReactions):
         :param nproc:
         """
 
-        MXeneReactions.__init__(self=self,
-                                mxene=mxene,
-                                competing_phases=competing_phases,
-                                solution=solution,
-                                parentmax=parentmax,
-                                verbosity=verbosity,
-                                tmxene=tmxene,
-                                nproc=nproc)
+        self.__clsmxenereac__.__init__(self=self,
+                                       mxene=mxene,
+                                       competing_phases=competing_phases,
+                                       solution=solution,
+                                       parentmax=parentmax,
+                                       verbosity=verbosity,
+                                       tmxene=tmxene,
+                                       nproc=nproc)
 
         if not isinstance(molenergies, dict):
             raise ValueError(f"Expected an instance of {dict}, but got {type(molenergies)}")
@@ -1113,10 +1153,10 @@ class MXeneAnalyzerbetav1(MXeneReactions, MXeneSidephaseReactions):
         assert "mxenes" not in self.outputs and "Tmxenes" not in self.outputs
         assert "sidereactions" not in self.outputs and "side2reactions" not in self.outputs
         if not mxenenumerate:
-            MXeneReactions.get_reactions(self=self, return_df=False)
+            self.__clsmxenereac__.get_reactions(self=self, return_df=False)
 
         else:
-            MXeneReactions.get_reactions_enumerate(self)
+            self.__clsmxenereac__.get_reactions_enumerate(self)
 
         sidereactions, side2reactions = MXeneSidephaseReactions.get_reactions(self, solvers_check=solvers_check)
         self.outputs["sidereactions"] = sidereactions
@@ -1125,7 +1165,7 @@ class MXeneAnalyzerbetav1(MXeneReactions, MXeneSidephaseReactions):
     def _energies_(self):
 
         en_dct = {}
-        mxene_en, tmxene_en, max_en = MXeneReactions.get_energies(self=self)
+        mxene_en, tmxene_en, max_en = self.__clsmxenereac__.get_energies(self=self)
         en_dct["mxene"] = mxene_en
         if tmxene_en:
             en_dct["tmxene"] = tmxene_en
@@ -1141,11 +1181,16 @@ class MXeneAnalyzerbetav1(MXeneReactions, MXeneSidephaseReactions):
 
     def get_energies(self, return_df=False):
 
-        en_mxene, en_tmxene, en_max = MXeneReactions.get_energies(self)
+        en_mxene, en_tmxene, en_max = self.__clsmxenereac__.get_energies(self)
         en_sp = MXeneSidephaseReactions.get_energies(self=self, return_df=False, from_df=True)
         return en_mxene, en_tmxene, en_max, en_sp
 
     def _get_reaction_energies_mxenes(self, energies_, en_sp, tipe="mxenes"):
+        # todo: either use unique_keys for the dictionaries, or shift to lists. This can still cause bug here.
+        #  better way would be to either generate index or energy along with the reaction balance and from the
+        #  index unique energies from the dataframe can be obtained. The index can be made unique using either
+        #  mpi-id or dataframe index. or simply directly use energy.
+
         for reac in self.outputs[tipe]:
             append_dict1_dict2_exclusive(energies_, en_sp, reac[-1].keys(), exclude=[self.mxene.formula,
                                                                                      self.tmxene.formula])
@@ -1200,6 +1245,8 @@ class MXeneAnalyzerbetav1(MXeneReactions, MXeneSidephaseReactions):
 
 
 class MultiTermMXeneAnalyzerbetav1(MXeneAnalyzerbetav1, MultiTermMXenReactions):
+    __clsmxenereac__ = MultiTermMXenReactions
+
     def __init__(self,
                  mxene: MXeneSpecie,
                  competing_phases: Sidephases,
@@ -1209,8 +1256,8 @@ class MultiTermMXeneAnalyzerbetav1(MXeneAnalyzerbetav1, MultiTermMXenReactions):
                  tmxenes: MXeneSpecies = None,  # assuming that the termination is part of tmxene.term
                  etchant_energies: dict = {},
                  verbosity: int = 1,
-                 nproc=None
-                 ):
+                 nproc: object = None
+                 ) -> object:
         """ For details about the parameter list, see MXeneReactions.
 
         :param mxene:
@@ -1224,15 +1271,15 @@ class MultiTermMXeneAnalyzerbetav1(MXeneAnalyzerbetav1, MultiTermMXenReactions):
         :param nproc:
         """
 
-    # initialize MultTermMXene
-        MultiTermMXenReactions.__init__(self=self,
-                                        mxene=mxene,
-                                        competing_phases=competing_phases,
-                                        parentmax=parentmax,
-                                        tmxenes=tmxenes,
-                                        solution=solution,
-                                        verbosity=verbosity,
-                                        nproc=nproc)
+        # initialize MultTermMXene
+        self.__clsmxenereac__.__init__(self=self,
+                                       mxene=mxene,
+                                       competing_phases=competing_phases,
+                                       parentmax=parentmax,
+                                       tmxenes=tmxenes,
+                                       solution=solution,
+                                       verbosity=verbosity,
+                                       nproc=nproc)
 
         if not isinstance(molenergies, dict):
             raise ValueError(f"Expected an instance of {dict}, but got {type(molenergies)}")
@@ -1540,6 +1587,14 @@ class MXenesAnalyzersBase:
 
         assert isinstance(etchant_energies, dict)
         self.etchant_energies = etchant_energies  # it should be part of the solution
+        # outputs analyzers.
+        self.analyzers = []
+
+    def __len__(self):
+        return len(self.analyzers)
+
+    def __getitem__(self, item):
+        return self.analyzers[item]
 
     @property
     def logger(self):
@@ -1643,49 +1698,71 @@ class MultiTermMXeneAnalyzersBase(MXenesAnalyzersBase):
                  termination: list or tuple,
                  etchant_energies: dict = {},
                  verbosity: int = 1,
-                 nproc=None):
-        
-        super().__init__(self=self,
-                         mxenecomps=mxenecomps,
-                         Tmxenecomps=Tmxenecomps,
-                         maxphases=maxphases,
-                         sidephases=sidephases,
-                         solution=solution,
-                         etchant_energies=etchant_energies,
-                         verbosity=verbosity,
-                         nproc=nproc)
-
+                 nproc: object = None) -> object:
+        assert isinstance(termination, (list, tuple))
         self.termination = termination
+
+        MXenesAnalyzersBase.__init__(self=self,
+                                     mxenecomps=mxenecomps,
+                                     Tmxenecomps=Tmxenecomps,
+                                     maxphases=maxphases,
+                                     sidephases=sidephases,
+                                     solution=solution,
+                                     etchant_energies=etchant_energies,
+                                     verbosity=verbosity,
+                                     nproc=nproc)
+
+    # def __inner_initialize(self,
+    #                        mxenecomps,
+    #                        Tmxenecomps,
+    #                        maxphases,
+    #                        sidephases,
+    #                        solution,
+    #                        etchant_energies,
+    #                        verbosity):
+    #
+    #     self.verbosity = verbosity
+    #     self._logger = None
+    #
+    #     assert isinstance(maxphases, MAXSpecies)
+    #
+    #     assert isinstance(solution, Species)
+    #     self.solution = solution
+    #
+    #     assert isinstance(sidephases, Sidephases)
+    #     self.sidephases = sidephases
+    #
+    #     assert isinstance(mxenecomps, MXeneSpecies)
+    #     assert isinstance(Tmxenecomps, dict)
+    #     assert all([isinstance(Tmxenecomps[k], MXeneSpecies) for k in self.termination])
+    #
+    #     assert isinstance(etchant_energies, dict)
+    #     self.etchant_energies = etchant_energies  # it should be part of the solution
+    #
 
     def _setup_(self, mxenes, Tmxenes, maxes, nproc=None, ):
         assert len(mxenes) == len(maxes)
         # get all the MXenes which have same MAX phase..
 
-            analyzers = [MXeneAnalyzerbetav1(mxene=mxco,
-                                             competing_phases=Sidephases([]),
-                                             solution=self.solution,
-                                             molenergies={},
-                                             tmxene=tmxco,
-                                             parentmax=maxp,
-                                             etchant_energies=self.etchant_energies,
-                                             verbosity=self.verbosity,
-                                             nproc=nproc) for mxco, tmxco, maxp in
-                         zip(mxenes, Tmxenes, maxes)]
-        except AssertionError:
-        # we fail the assertion error, we have to make sure that maxes and baremxenes(mxenes here) are of
-        # same length
-            assert len(mxenes) == len(maxes)
-            assert len(Tmxenes) % len(maxes) == 0 # it is a multiplier.
-            # we create separate analyzer for unterminated and terminated MXenes..
-            analyzers = []
-            for mxco in mxenes:
-                lyzer = MXeneAnalyzerbetav1(mxene=mxco,
-                                            competing_phases=Sidephases([]),
-                                            solution=self.solution,
-                                            molenergies={},
-                                            tmxene=MXeneSpecie([]),
-                                            )
+        analyzers = []
+        for mxco, maxp in zip(mxenes, maxes):
+            assert mxco.max == maxp
 
+            # collect the T-terminated MXenes which have same MAX.
+            tmxenes = Tmxenes.select_maxph(maxformula=maxp.formula)
+            print("mxene:", mxco)
+            print("tmxenes:", tmxenes)
+            lyzer = MultiTermMXeneAnalyzerbetav1(mxene=mxco,
+                                                 competing_phases=Sidephases([]),  # this is set on the fly.
+                                                 solution=self.solution,
+                                                 molenergies={},
+                                                 tmxenes=tmxenes,
+                                                 parentmax=maxp,
+                                                 etchant_energies=self.etchant_energies,
+                                                 verbosity=self.verbosity,
+                                                 nproc=nproc)
+
+            analyzers.append(lyzer)
 
         self.analyzers = analyzers
 

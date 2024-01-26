@@ -3,7 +3,7 @@ from itertools import permutations as itpermutations
 from ase.db import connect
 from ase.db.core import Database as dBcore, AtomsRow
 from pymatgen.core.composition import Composition as Pycomposition
-from pymatgen.core.periodic_table import  Element as Pyelement
+from pymatgen.core.periodic_table import Element as Pyelement
 from pymatgen.entries.computed_entries import ComputedEntry, ComputedStructureEntry
 from pymongo import MongoClient
 
@@ -108,7 +108,7 @@ class Search_Engine:
         result = self.collection.insert_many(docs)
         return result
 
-    def search_formula(self, primitive_formula: str,key="pretty_formula", **kwargs):
+    def search_formula(self, primitive_formula: str, key="pretty_formula", **kwargs):
         comp_list = []
         comp = Pycomposition(primitive_formula).reduced_composition.iupac_formula.split()
         for per in itpermutations(comp, len(comp)):
@@ -152,16 +152,16 @@ class Search_Engine:
 
 class SearchEnginenewapi(Search_Engine):
 
-    def get_docs_system(self, elements:list, sort_by_e_above_hull:bool=True):
+    def get_docs_system(self, elements: list, sort_by_e_above_hull: bool = True):
         chemsys = "-".join(sorted(elements))
         docs = self.get_entries(criteria={"chemsys": {"$in": [chemsys]}})
 
         if sort_by_e_above_hull:
-            docs = sorted(docs,key=lambda k: k.get("energy_above_hull"))
+            docs = sorted(docs, key=lambda k: k.get("energy_above_hull"))
 
         return docs
 
-    def get_docs_systems(self, chemsys:list, sort_by_e_above_hull:bool=True ):
+    def get_docs_systems(self, chemsys: list, sort_by_e_above_hull: bool = True):
         """
         Get the docs(dict) that are present in the local mongo database of a list of chemical systems.
         :param chemsys: list of chemical systems to search
@@ -169,29 +169,31 @@ class SearchEnginenewapi(Search_Engine):
         :return:
         """
         chemsys = ["-".join(sorted(chem.split("-"))) for chem in chemsys]
-        docs = self.get_entries(criteria={"chemsys": {"$in":chemsys}})
-        docsout = {k:[] for k in chemsys}
+        docs = self.get_entries(criteria={"chemsys": {"$in": chemsys}})
+        docsout = {k: [] for k in chemsys}
         index = 0
         while index < len(docs):
             doc = docs.pop(index)
             docsout[doc["chemsys"]] += [doc]
 
         if sort_by_e_above_hull:
-            for k,v in docsout.items():
-                v.sort(key=lambda i:i.get("energy_above_hull"))
+            for k, v in docsout.items():
+                v.sort(key=lambda i: i.get("energy_above_hull"))
 
-        docsout = json.loads(json.dumps(docsout, cls=MontyEncoder), cls=MontyDecoder) # will convert pymatgen dicts to instances..
+        docsout = json.loads(json.dumps(docsout, cls=MontyEncoder),
+                             cls=MontyDecoder)  # will convert pymatgen dicts to instances..
         return docsout
 
     @staticmethod
-    def get_entries_docs(docs:dict):
-        warnings.warn("We manually set the correction to zero, check the data of entry if any correction is added and use uncorrected_energy_per_atom *nsites as energy fo an entry")
+    def get_entries_docs(docs: dict):
+        warnings.warn(
+            "We manually set the correction to zero, check the data of entry if any correction is added and use uncorrected_energy_per_atom *nsites as energy fo an entry")
 
-        return {k:[ComputedEntry(composition=d["composition"], # we set the correction to zero
-                                 correction=0,
-                                 energy=d["uncorrected_energy_per_atom"]*d["nsites"],
-                                 data=d,
-                                 entry_id=d["material_id"]) for d in v] for k,v in docs.items()}
+        return {k: [ComputedEntry(composition=d["composition"],  # we set the correction to zero
+                                  correction=0,
+                                  energy=d["uncorrected_energy_per_atom"] * d["nsites"],
+                                  data=d,
+                                  entry_id=d["material_id"]) for d in v] for k, v in docs.items()}
 
     def search_formula(self, primitive_formula: str, key="formula_pretty", **kwargs):
         comp_list = []
@@ -200,7 +202,7 @@ class SearchEnginenewapi(Search_Engine):
 
         if len(comp) == 1 and primitive_formula not in ["H", "F", "N", "Cl", "O"]:
             if not Pyelement(primitive_formula).is_halogen:
-                comp = [primitive_formula] # we have element in this cae
+                comp = [primitive_formula]  # we have element in this cae
 
         for per in itpermutations(comp, len(comp)):
             comp_list.append(" ".join(per))
@@ -212,7 +214,7 @@ class SearchEnginenewapi(Search_Engine):
     def get_entries_formula(self, formula: str, sort_by_e_above_hull: bool = False):
 
         docs = []
-        for d in self.search_formula(primitive_formula=formula,):
+        for d in self.search_formula(primitive_formula=formula, ):
             docs.append(d)
 
         if sort_by_e_above_hull:
@@ -221,7 +223,7 @@ class SearchEnginenewapi(Search_Engine):
         # if sort_by_e_above_hull:
         #     for k,v in docs.items():
         #         v.sort(key=lambda i: i.get("energy_above_hull"))
-        docs = {formula:docs}
+        docs = {formula: docs}
         entries = self.get_entries_docs(docs=docs)
         assert len(entries) == 1
         return entries[formula]
@@ -268,17 +270,17 @@ class SearcherdB:
 
     def get_formulas(self, formulas: list, **kwargs):
         fdict = {}
-         
-         # do  not mix list and 
+
+        # do  not mix list and
         t_key = list(kwargs.keys())
         if not t_key or not isinstance(kwargs[t_key[0]], (tuple, list)):
-            for i,f in enumerate(formulas):
+            for i, f in enumerate(formulas):
                 rrows = self.get_formula(f, **kwargs)
                 fdict[f] = rrows
         else:
             fdict = []
-            for i,f in enumerate(formulas):
-                rrows = self.get_formula(f, **{k:v[i] for k,v in kwargs.items()})
+            for i, f in enumerate(formulas):
+                rrows = self.get_formula(f, **{k: v[i] for k, v in kwargs.items()})
                 fdict.append(rrows)
         return fdict
 
@@ -292,7 +294,7 @@ class Row:
 
         if self is obj:
             return True
-        
+
         # just compare the universal unique id...
         return self.row.unique_id == obj.row.unique_id
 
@@ -365,7 +367,7 @@ class Entry:
 
     def __str__(self):
         self._entry.__str__()
-    
+
     def __eq__(self, __value: object) -> bool:
         self._entry.__eq__()
 
@@ -418,7 +420,7 @@ class DummyRow(AtomsRow):
         super(DummyRow, self).__str__()
 
 
-def converttoformula_chemsysrows(rows:dict):
+def converttoformula_chemsysrows(rows: dict):
     """
     Converts a dictionary containing chemical systems rows into formula keys, ros.
     :param rows:

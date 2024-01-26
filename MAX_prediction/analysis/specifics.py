@@ -18,7 +18,7 @@ from MAX_prediction.utils import check_MAXlikecomp
 from MAX_prediction.utils import sortfuncchemsys
 
 
-def get_elements_chemical_systems(chemical_systems:list):
+def get_elements_chemical_systems(chemical_systems: list):
     els = set()
     for i in chemical_systems:
         els.update(i.split("-"))
@@ -29,7 +29,7 @@ def get_elements_chemical_systems(chemical_systems:list):
 
 class MXeneSpecie(CoreSpecie):
 
-    def __init__(self, formula: str, parentmax=None, termination:str=None, verbosity: int = 1):
+    def __init__(self, formula: str, parentmax=None, termination: str = None, verbosity: int = 1):
         super(MXeneSpecie, self).__init__(formula=formula)
         self._composition = None
         self._elements = None
@@ -44,7 +44,6 @@ class MXeneSpecie(CoreSpecie):
             self.term = termination
         self.verbosity = verbosity
 
-
     def __repr__(self):
         st = "{}".format(self.formula)
         if self.max:
@@ -52,7 +51,6 @@ class MXeneSpecie(CoreSpecie):
         if self.term:
             st += f", term={self.term}"
         return "{0}({1})".format(MXeneSpecie.__name__, st)
-
 
     @property
     def formula(self):
@@ -82,14 +80,16 @@ class MXeneSpecie(CoreSpecie):
     @property
     def term(self):
         return self._term
-    
+
     @term.setter
     def term(self, value):
         Composition(value)
         self._term = value
 
+
 class MXeneSpecies(MAXSpecies):
     coresp = MXeneSpecie
+
     def __init__(self, formulas, parentmax=None, termination=None):
         """ An object for handling a collection of MXene species.
 
@@ -102,7 +102,6 @@ class MXeneSpecies(MAXSpecies):
             self.setmax(maxformulas=parentmax)
         if termination is not None:
             self.setterm(term=termination)
-
 
     def __repr__(self):
         st = "{}".format(self.formula)
@@ -137,7 +136,7 @@ class MXeneSpecies(MAXSpecies):
 
     def get_maxmxeneformula(self):
         """Generates MXene_MAX formulas"""
-        return ["{}_{}".format(mx, maxp) for mx,maxp in zip(self.formula, self.get_maxformula())]
+        return ["{}_{}".format(mx, maxp) for mx, maxp in zip(self.formula, self.get_maxformula())]
 
     def setmax(self, maxformulas: list or tuple):
         for specie, f in zip(self.composition, maxformulas):
@@ -146,7 +145,7 @@ class MXeneSpecies(MAXSpecies):
     def setterm(self, term: list or tuple):
         self._set_coresp_attribute(attribute_name="term", attribute_lst=term)
 
-    def _set_coresp_attribute(self, attribute_name: str , attribute_lst: list or tuple,):
+    def _set_coresp_attribute(self, attribute_name: str, attribute_lst: list or tuple, ):
         for specie, attr in zip(self.composition, attribute_lst):
             setattr(specie, attribute_name, attr)
 
@@ -154,13 +153,14 @@ class MXeneSpecies(MAXSpecies):
         energies = {f"{specie.formula}_{specie.max.formula}": specie.energy_per_formula for specie in self.composition}
         return energies
 
-    def select_maxph(self, maxformula:str):
+    def select_maxph(self, maxformula: str):
 
         index = np.where(self.get_maxformula == np.asarray(maxformula))[0]
         if index.size == 0:
             raise ValueError("No mxene of max formula {} found".format(maxformula))
 
         return self[index]
+
 
 class SidephasesCore(Species):
 
@@ -169,8 +169,9 @@ class SidephasesCore(Species):
                  verbosity: int = 1):
 
         super(SidephasesCore, self).__init__(formulas=formulas, asedb=asedb, establish_mongo=establish_mongo, host=host,
-                                         port=port, database=database, client=client, collection_name=collection_name,
-                                         verbosity=verbosity)
+                                             port=port, database=database, client=client,
+                                             collection_name=collection_name,
+                                             verbosity=verbosity)
 
         self._df = None
 
@@ -374,7 +375,7 @@ class NewElements(Elements):
         return elrows
 
 
-class Sidephases(SidephasesCore): # this class could be problem specific
+class Sidephases(SidephasesCore):  # this class could be problem specific
 
     def setup_mongo(self, chemical_systems):
         docs, missing_chemsys = self.get_docs_chemical_systems_in_mongodb(chemsys=chemical_systems,
@@ -465,7 +466,7 @@ class SidephaseMAX(MAXSpecies, Sidephases):
 
 class NewElements(NewElements):  # customized user defined classes to implement specific functions.
 
-    def get_set_elementalrows(self, dummyrows:dict={}):
+    def get_set_elementalrows(self, dummyrows: dict = {}):
         elrows = self.search_in_asedb()
 
         if dummyrows:

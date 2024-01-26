@@ -22,6 +22,14 @@ class CoreSpecie:
     def __str__(self):
         return self.__repr__()
 
+    def __eq__(self, obj: object) -> bool:
+        # identity check
+        selfbool = super().__eq__(obj)  # identity check
+        if selfbool:
+            return True
+
+        return self.composition == obj.composition and self.row == obj.row and self.entry == obj.entry
+
     @property
     def formula(self):
         return self._formula
