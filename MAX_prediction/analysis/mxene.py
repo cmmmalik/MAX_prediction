@@ -230,12 +230,19 @@ class MXeneBase:
         return reactions, reactions_2solver
 
     @classmethod
-    def _paralleliter_balance_(cls, productiter, reactants, solvers_check=True, verbosity: int = 1, nproc: int = 1,
-                               mergesolvers=True):
+    def _paralleliter_balance_(cls, productiter,
+                               reactants,
+                               solvers_check=True,
+                               verbosity: int = 1,
+                               nproc: int = 1,
+                               mergesolvers=True,
+                               poolmap:str="imap",
+                               **kwargs):
 
         funcobj = Parallelbalance(reactants=reactants, solvers_check=solvers_check)  # partial function quantities
         with Pool(nproc) as mp:
-            reactions, reactions2_solver = list(mp.imap(func=funcobj.actualfunc, iterable=productiter))
+            parallelmp = getattr(mp, poolmap)
+            reactions, reactions2_solver = list(parallelmp(func=funcobj.actualfunc, iterable=productiter, **kwargs))
 
         assert len(reactions) == len(reactions2_solver)
         if mergesolvers:
@@ -635,7 +642,8 @@ class MultiTermMXenReactions(MXeneReactions):
             reactions = self._paralleliter_balance_(productiter=gen_iterproducts,
                                                     reactants=reactants,
                                                     solvers_check=True,
-                                                    nproc=self.nproc)
+                                                    nproc=self.nproc,
+                                                    chunksize=len(sphase)*sizelimits[-1])
 
         if return_df:
             if reactions_2solver:
@@ -746,7 +754,8 @@ class MXeneSidephaseReactions(MXeneBase):
                                                     solvers_check=solvers_check,
                                                     verbosity=self.verbosity,
                                                     nproc=self.nproc,
-                                                    mergesolvers=True)
+                                                    mergesolvers=True,
+                                                    chunksize=len(self.competing_phases.df.phase)*sizelimits[-1])
             # func = partial(self._balance, reactants=reactants, solvers_check=True)
 
             # with Pool(self.nproc) as mp:
