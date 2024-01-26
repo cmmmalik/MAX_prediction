@@ -87,10 +87,11 @@ class Parallelbalance:
     """
 
     def __init__(self, reactants, solvers_check) -> None:
-        self.func = partial(MXeneBase._balance, reactants=reactants, solvers_check=solvers_check)
+        self.func = partial(MXeneBase._balance, reactants=reactants, solvers_check=solvers_check, verbosity=0)
 
     def actualfunc(self, iprod):
-        return self.func(i=iprod[0], product=iprod[1])
+        print(f"tying to balance Reaction No.: {iprod[0]}")
+        return  self.func(i=iprod[0], products=iprod[1])
 
 
 class MXeneBase:
@@ -177,13 +178,15 @@ class MXeneBase:
 
     @staticmethod
     def _balance(i,
-                 product,
+                 products,
                  reactants,
+                 verbosity:int=1,
                  solvers_check=True):
 
-        eq1coeffs, eq2coeffs = Balance(reactants=reactants, product=product).balance(solvers_check=solvers_check)
+        eq1coeffs, eq2coeffs = Balance(reactants=reactants, products=products, verbosity=verbosity).balance(solvers_check=solvers_check)
         if eq1coeffs or eq2coeffs:
             print(f"Balanced: {i}")
+            print("--------")
 
         return eq1coeffs, eq2coeffs
 
@@ -198,7 +201,7 @@ class MXeneBase:
             print("product from enumeration: {}".format(products))
 
         coeffs, coeffs_2balanc = cls._balance(reactants=reactants,
-                                              product=products,
+                                              products=products,
                                               i=i,
                                               solvers_check=solvers_check)  # the two lists will be mutually exclusive.
 
@@ -213,12 +216,12 @@ class MXeneBase:
         reactions = []
         reactions_2solver = []
 
-        for i, product in productiter:
+        for i, products in productiter:
             if verbosity >= 2:
-                print("trying to balance:\n{}---->{}".format("+".join(reactants), "+".join(product)))
+                print("trying to balance:\n{}---->{}".format("+".join(reactants), "+".join(products)))
 
             coeffs, coeffs_2balance = cls._balance(reactants=reactants,
-                                                   product=product,
+                                                   products=products,
                                                    i=i,
                                                    solvers_check=solvers_check)
             if coeffs:
@@ -334,26 +337,36 @@ class MXeneReactions(MXeneBase):
             print("Species:\n{}".format(species))
 
         iterlst = generate_products(species)
-        reactions = []
+
         if not self.nproc:
-            for i, product in iterlst:
-                coeffs, coeffs_2balanc = self._balance(i=i,
-                                                       reactants=reactants,
-                                                       product=product,
-                                                       solvers_check=True)
-
-                if coeffs:
-                    reactions.append(coeffs)
-
-                elif coeffs_2balanc:
-                    reactions.append(coeffs_2balanc)
+            reactions, reactions_2solver = self._serialiter_balance_(productiter=iterlst,
+                                                                     reactants=reactants,
+                                                                     solvers_check=True,
+                                                                     verbosity=self.verbosity)
+            # for i, product in iterlst:
+            #     coeffs, coeffs_2balanc = self._balance(i=i,
+            #                                            reactants=reactants,
+            #                                            products=product,
+            #                                            solvers_check=True)
+            #
+            #     if coeffs:
+            #         reactions.append(coeffs)
+            #
+            #     elif coeffs_2balanc:
+            #         reactions.append(coeffs_2balanc)
 
         else:
-            func = partial(self._balance, reactants=reactants, solvers_check=True)
-            with Pool(self.nproc) as mp:
-                coeffs, coeffs_2balance = list(mp.imap(func, iterlst))
-                assert len(coeffs) == len(coeffs_2balance)
-                reactions = list(filter(lambda x: x[0] if x[0] else x[1], zip(coeffs, coeffs_2balance)))
+            # func = partial(self._balance, reactants=reactants, solvers_check=True)
+            # with Pool(self.nproc) as mp:
+            #     coeffs, coeffs_2balance = list(mp.imap(func, iterlst))
+            #     assert len(coeffs) == len(coeffs_2balance)
+            #     reactions = list(filter(lambda x: x[0] if x[0] else x[1], zip(coeffs, coeffs_2balance)))
+
+                reactions = self._paralleliter_balance_(productiter=iterlst,
+                                                        reactants=reactants,
+                                                        solvers_check=True,
+                                                        nproc=self.nproc,
+                                                        chunksize=len(species))
 
         if return_df:
             return reactions, DataFrame(reactions, columns=["reactants", "products"])
@@ -406,13 +419,13 @@ class MXeneReactions(MXeneBase):
         gen_iterproducts = generate_products()
 
         if not self.nproc:
-            for i, product in gen_iterproducts:
+            for i, products in gen_iterproducts:
 
                 if self.verbosity >= 2:
-                    print("product from enumeration: {}".format(product))
+                    print("product from enumeration: {}".format(products))
 
                 coeffs, coeffs_2balanc = self._balance(reactants=reactants,
-                                                       product=product,
+                                                       products=products,
                                                        i=i,
                                                        solvers_check=True)  # the two lists will be mutually exclusive.
                 if coeffs:
@@ -897,8 +910,8 @@ class MXeneAnalyzer:
             print("Species:\n{}".format(species))
         reactions = []
         for i, sp in enumerate(species):  # will iterate over A-H chemical systems .......
-            product = [self.mxene.formula, sp, "H"]
-            coeffs, coeffs_2balanc = self._balance(reactants=reactants, product=product, i=i, solvers_check=True)
+            products = [self.mxene.formula, sp, "H"]
+            coeffs, coeffs_2balanc = self._balance(reactants=reactants, products=products, i=i, solvers_check=True)
             if coeffs_2balanc and not coeffs:
                 raise NotImplementedError(
                     "Unable to hand if both balancing solvers"" give different result:(check manually please the reaction)")
@@ -973,11 +986,11 @@ class MXeneAnalyzer:
         return reactions, reactions_2solver
 
     def _balance(self, reactants,
-                 product,
+                 products,
                  i,
                  solvers_check=True):
 
-        eq1coeffs, eq2coeffs = Balance(reactants=reactants, product=product).balance(solvers_check=solvers_check)
+        eq1coeffs, eq2coeffs = Balance(reactants=reactants, products=products).balance(solvers_check=solvers_check)
         if eq1coeffs or eq2coeffs:
             print(f"Balanced: {i}")
 
@@ -989,7 +1002,7 @@ class MXeneAnalyzer:
             print("product from enumeration: {}".format(products))
 
         coeffs, coeffs_2balanc = self._balance(reactants=reactants,
-                                               product=products,
+                                               products=products,
                                                i=i,
                                                solvers_check=solvers_check)  # the two lists will be mutually exclusive.
 
