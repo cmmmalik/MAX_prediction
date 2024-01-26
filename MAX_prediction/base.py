@@ -14,7 +14,7 @@ from colorama import Fore, Back, init
 from mse.analysis.chemical_equations import equation_balancer_v1, LinearlydependentMatrix
 from mse.composition_utils import MAXcomp, EnhancedComposition as Pycomp
 from mse.ext.materials_project import SmartMPRester
-from pandas import DataFrame, notna, Series
+from pandas import DataFrame, notna, Series, concat
 from pymatgen.core.composition import Composition as Pymcomp
 
 init(autoreset=True)
@@ -1577,7 +1577,8 @@ class Pandasutils:
     def append_elementalenergy_df(df: DataFrame, total_elements: list, elemental_energies: dict):
         out = [{"phase": el, "chemsys": el, "total_energy_per_formula": elemental_energies[el]} for el in
                total_elements]
-        return df.append(DataFrame(out), ignore_index=True)
+        # return df.append(DataFrame(out), ignore_index=True)
+        return concat([df,DataFrame(out)], ignore_index=True)
 
     @staticmethod
     def get_formation_energy_df(df_series: Series, elemental_energies: dict, en_colname="total_energy_per_formula"):
