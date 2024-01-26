@@ -41,14 +41,14 @@ def calculate_reaction_energy(reactants, products, energies: dict, verbosity: in
 
 class Balance:
 
-    def __init__(self, reactants, product):
+    def __init__(self, reactants, product, verbosity:int=1, allow_reactant0:list=None):
         self.reactants = reactants
         self.products = product
         self.verbosity = verbosity
         if allow_reactant0:
             self._allowzero = allow_reactant0
 
-    def balance(self, solvers_check=True, verbosity:int=1):
+    def balance(self, solvers_check=True,):
         reactants = self.reactants
         product = self.products
 
@@ -75,20 +75,21 @@ class Balance:
                 print(coeffs)
             print()
             eq1coeffs = coeffs
+
         except (LinearlydependentMatrix, AssertionError) as e:
 
             if self.verbosity >= 1:
                 print(e)
 
             return None, None
+
         except Exception as ex:
             print(ex)
             if solvers_check:
                 try:
                     coeffs = balance_stoichiometry(reactants=reactants, products=product, underdetermined=None)
                     print(Fore.BLUE + "the chempy solver balanced the reaction")
-                    print("Balanced:")
-                    print(coeffs)
+
                     product_out = coeffs[-1]
                     reactant_out = coeffs[0]
                     neg_coef = self._check_negative_coeffs(product_out=product_out, reactant_out=reactant_out)
