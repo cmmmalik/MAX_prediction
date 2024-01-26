@@ -3,7 +3,7 @@ from itertools import chain as itchain
 from pandas import DataFrame
 from chempy import balance_stoichiometry
 from colorama import Fore
-from mse.analysis.chemical_equations import equation_balancer_v2, LinearlydependentMatrix
+from mse.analysis.chemical_equations import equation_balancer_v2, LinearlydependentMatrix, equation_balancer_v3
 
 
 def calculate_reaction_energy(reactants, products, energies: dict, verbosity: int = 1, decimtol: int = 6):
@@ -56,7 +56,7 @@ class Balance:
             print("trying to balance")
             print(f"{'+'.join(reactants)} -------> {'+ '.join(product)}")
         try:
-            _, coeffs = equation_balancer_v2(reactants=reactants,
+            _, coeffs = equation_balancer_v3(reactants=reactants,
                                              products=product,
                                              verbosity=0)
             print("Balanced:")
