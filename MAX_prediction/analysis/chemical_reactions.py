@@ -117,7 +117,7 @@ class Balance:
 
 
     @staticmethod
-    def _check_negative_coeffs(product_out, reactant_out):
+    def _check_negative_coeffs(product_out, reactant_out, verbosity:int=1):
         neg_coef = False
         for k, vv in itchain(reactant_out.items(), product_out.items()):
             if vv < 0:
