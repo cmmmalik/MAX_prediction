@@ -239,7 +239,7 @@ class MXeneBase:
                                verbosity: int = 1,
                                nproc: int = 1,
                                mergesolvers=True,
-                               poolmap:str="imap",
+                               poolmap:str="map",
                                **kwargs):
 
         funcobj = Parallelbalance(reactants=reactants, solvers_check=solvers_check)  # partial function quantities
