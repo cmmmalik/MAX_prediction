@@ -61,9 +61,10 @@ class Balance:
         try:
             _, coeffs = equation_balancer_v3(reactants=reactants,
                                              products=product,
-                                             verbosity=0)
-            print("Balanced:")
-            print(coeffs)
+                                             verbosity=0,
+                                             allowed_zeros=self._allowzero)
+
+
             product_out = coeffs[-1]
             reactant_out = coeffs[0]
             neg_coef = self._check_negative_coeffs(product_out=product_out, reactant_out=reactant_out)
