@@ -41,10 +41,11 @@ def calculate_reaction_energy(reactants, products, energies: dict, verbosity: in
 
 class Balance:
 
-    def __init__(self, reactants, product, verbosity:int=1, allow_reactant0:list=None):
+    def __init__(self, reactants, products, verbosity:int=1, allow_reactant0:list=None):
         self.reactants = reactants
-        self.products = product
+        self.products = products
         self.verbosity = verbosity
+        self._allowzero = None
         if allow_reactant0:
             self._allowzero = allow_reactant0
 
