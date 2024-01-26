@@ -34,7 +34,7 @@ class Elements(Species):
         self._composition[index[0]] = value
 
     def __repr__(self):
-        sst = ["elements={}".format(self.els)]
+        sst = ["{}".format(self.els)]
         return "{0}({1})".format(Elements.__name__, ",".join(sst))
 
     def __str__(self):
