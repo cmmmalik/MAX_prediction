@@ -1357,6 +1357,61 @@ class MultiTermMXeneAnalyzerbetav1(MXeneAnalyzerbetav1, MultiTermMXenReactions):
         self.molenergies = molenergies
         self.etchantenergies = etchant_energies
 
+    def _get_reaction_energies_mxenes(self, energies_, en_sp, tipe="mxenes"):
+        # todo: either use unique_keys for the dictionaries, or shift to lists. This can still cause bug here.
+        #  better way would be to either generate index or energy along with the reaction balance and from the
+        #  index unique energies from the dataframe can be obtained. The index can be made unique using either
+        #  mpi-id or dataframe index. or simply directly use energy.
+
+        for reac in self.outputs[tipe]:
+
+            if reac:
+
+                append_dict1_dict2_exclusive(energies_, en_sp, reac[-1].keys(), exclude=[self.mxene.formula,
+                                                                                     *self.tmxenes.formula.tolist()])
+
+            # exclude both bare and terminate for mxene reactions, we should exlude, to make sure that,
+            # these energies are not overwritten.
+
+        rdf = self._calculate_reaction_enthalpies(self.outputs[tipe], energies=energies_, verbosity=self.verbosity)
+        rdf["type"] = "MXene"
+        return rdf
+
+    def get_reaction_energies(self):
+        # Todo: we have to handled energies in a better way, Chances of having bugs here are hige.
+
+        en_mxene, en_tmxene, en_max, en_sp = self.get_energies()
+        assert en_max
+
+        if "Tmxenes" in self.outputs:
+            assert en_tmxene
+
+        # reactant energies...
+        energies_reac = copy_append_dict(en_max, self.etchantenergies)
+
+        outputkeys = self.outputs.keys()
+        df = DataFrame()  # empty dataframe for saving the outputs..
+
+        # exclude max from en_sp.
+
+        en_sp.pop(self.max.formula, None)
+
+        for key in outputkeys:
+            if key in ["mxenes", "Tmxenes"]:
+                energies_ = {}
+                if key == "mxenes" or key == "Tmxenes":
+                    energies_ = copy_append_dict(energies_reac, en_mxene) # combinning energies of mxenes and Tmxenes together.
+                    energies_ = copy_append_dict(energies_, en_tmxene)
+                rdf = self._get_reaction_energies_mxenes(energies_, en_sp, tipe=key)
+                df = concat([df, rdf], axis=0, ignore_index=True)
+
+        keys = [i for i in outputkeys if i in ["sidereactions", "side2reactions"]]
+
+        df = concat([df, self._get_sidephase_energies_(energies_reac, en_sp, tipes=keys)], axis=0, ignore_index=True)
+
+        return df
+
+
 
 class MXenesAnalyzers:
     warnings.warn("No longer in use", DeprecationWarning, stacklevel=2)
