@@ -701,7 +701,7 @@ class MultiTermMXenReactions(MXeneReactions):
                                                     reactants=reactants,
                                                     solvers_check=True,
                                                     nproc=self.nproc,
-                                                    chunksize=None)
+                                                    chunksize=None) # chunk size is setup dynamically
 
         if return_df:
             if reactions_2solver:
