@@ -12,6 +12,7 @@ from mse.analysis.chemical_equations import equation_balancer_v2
 from pandas import DataFrame, concat, Series
 from pymatgen.core import periodic_table
 from pymatgen.core.periodic_table import Element as pymatElement
+from tqdm import tqdm
 
 from MAX_prediction.base import MAXSpecie, combine_compounds_multisize
 from MAX_prediction.core.species import Species
@@ -245,7 +246,13 @@ class MXeneBase:
         funcobj = Parallelbalance(reactants=reactants, solvers_check=solvers_check)  # partial function quantities
         with Pool(nproc) as mp:
             parallelmp = getattr(mp, poolmap)
-            reactions, reactions2_solver = list(parallelmp(func=funcobj.actualfunc, iterable=productiter, **kwargs))
+            # for showing the progress...
+            for result in tqdm(parallelmp(func=funcobj.actualfunc, iterable=productiter, **kwargs), total=len(productiter),
+                               desc="Processing"):
+                    reactions.append(result[0])
+                    reactions2_solver.append(result[-1])
+
+            # reactions, reactions2_solver = list(parallelmp(func=funcobj.actualfunc, iterable=productiter, **kwargs))
 
         assert len(reactions) == len(reactions2_solver)
         if mergesolvers:
@@ -313,7 +320,7 @@ class MXeneReactions(MXeneBase):
         """
 
         def generate_products(species):
-            for i, sp in enumerate(species):
+            for i, sp in tqdm(enumerate(species),desc="Processing"):
                 yield i, [mxene.formula, sp, 'H']
 
         assert tipe in ["mxene", "tmxene"]
@@ -389,10 +396,11 @@ class MXeneReactions(MXeneBase):
         """
 
         def generate_products():
-            for i, product in enumerate(combine_compounds_multisize(sphase,
+            for i, product in tqdm(enumerate(combine_compounds_multisize(sphase,
                                                                     combination_size=sizelimits,
                                                                     necessary=None,
-                                                                    subset=pseduels)):
+                                                                    subset=pseduels)),
+                                                                    desc="Processing"):
                 yield i, [mxene.formula] + list(product)
 
         reactants = [self.max.formula] + self.solution.formula.tolist()
@@ -581,10 +589,11 @@ class MultiTermMXenReactions(MXeneReactions):
         """
 
         def generate_products():
-            for i, product in enumerate(combine_compounds_multisize(sphase,
+            for i, product in tqdm(enumerate(combine_compounds_multisize(sphase,
                                                                     combination_size=sizelimits,
                                                                     necessary=None,
-                                                                    subset=pseduels)):
+                                                                    subset=pseduels)),
+                                                                    desc="Processing"):
                 yield i, [mxene.formula] + list(product)
 
         reactants = [self.max.formula] + self.solution.formula.tolist()
@@ -685,9 +694,10 @@ class MXeneSidephaseReactions(MXeneBase):
     def get_reactions(self, solvers_check=True):
 
         def generate_iter_products():
-            for i, product in enumerate(combine_compounds_multisize(self.competing_phases.df.phase,
+            for i, product in tqdm(enumerate(combine_compounds_multisize(self.competing_phases.df.phase,
                                                                     combination_size=sizelimits,
-                                                                    necessary=els)):
+                                                                    necessary=els)),
+                                                                    desc="Processing"):
                 yield i, product
 
         reactions = []
