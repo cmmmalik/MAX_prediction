@@ -255,6 +255,10 @@ class MXeneBase:
         productiter = list(productiter)
         reactions = []
         reactions2_solver = []
+
+        if kwargs.get("chunksize", None) is None:
+            kwargs["chunksize"] = round(len(productiter)/(4*nproc))
+
         with Pool(nproc) as mp:
             parallelmp = getattr(mp, poolmap)
             # for showing the progress...
@@ -681,7 +685,7 @@ class MultiTermMXenReactions(MXeneReactions):
                                                     reactants=reactants,
                                                     solvers_check=True,
                                                     nproc=self.nproc,
-                                                    chunksize=len(sphase)*sizelimits[-1])
+                                                    chunksize=None)
 
         if return_df:
             if reactions_2solver:
@@ -794,7 +798,7 @@ class MXeneSidephaseReactions(MXeneBase):
                                                     verbosity=self.verbosity,
                                                     nproc=self.nproc,
                                                     mergesolvers=True,
-                                                    chunksize=len(self.competing_phases.df.phase)*sizelimits[-1])
+                                                    chunksize=None)
             # func = partial(self._balance, reactants=reactants, solvers_check=True)
 
             # with Pool(self.nproc) as mp:
