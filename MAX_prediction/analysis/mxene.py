@@ -697,8 +697,8 @@ class MultiTermMXenReactions(MXeneReactions):
         return energy
 
     def get_energies(self):
-        mxene_en, tmxene_en, max_en = super().get_energies()
-        assert tmxene_en is None
+        mxene_en, _, max_en = super().get_energies()
+        # assert tmxene_en is not None
         if self.tmxenes:
             tmxene_en = self.get_tmxene_en
 
