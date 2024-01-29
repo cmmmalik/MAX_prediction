@@ -12,6 +12,7 @@ from mse.analysis.chemical_equations import equation_balancer_v2
 from pandas import DataFrame, concat, Series
 from pymatgen.core import periodic_table
 from pymatgen.core.periodic_table import Element as pymatElement
+from tqdm import tqdm
 
 from MAX_prediction.base import MAXSpecie, combine_compounds_multisize
 from MAX_prediction.core.species import Species
@@ -86,11 +87,14 @@ class Parallelbalance:
     imap.
     """
 
-    def __init__(self, reactants, solvers_check) -> None:
-        self.func = partial(MXeneBase._balance, reactants=reactants, solvers_check=solvers_check)
+    def __init__(self, reactants, solvers_check, verbosity:int=0) -> None:
+        self.func = partial(MXeneBase._balance, reactants=reactants, solvers_check=solvers_check, verbosity=verbosity)
+        self.verbosity = verbosity
 
     def actualfunc(self, iprod):
-        return self.func(i=iprod[0], product=iprod[1])
+        if self.verbosity >= 1:
+            print(f"tying to balance Reaction No.: {iprod[0]}")
+        return self.func(i=iprod[0], products=iprod[1])
 
 
 class MXeneBase:
@@ -177,14 +181,16 @@ class MXeneBase:
 
     @staticmethod
     def _balance(i,
-                 product,
+                 products,
                  reactants,
+                 verbosity:int=1,
                  solvers_check=True):
 
-        eq1coeffs, eq2coeffs = Balance(reactants=reactants, product=product).balance(solvers_check=solvers_check)
-        if eq1coeffs or eq2coeffs:
+        eq1coeffs, eq2coeffs = Balance(reactants=reactants, products=products, verbosity=verbosity).balance(solvers_check=solvers_check)
+        if verbosity >= 0 and (eq1coeffs or eq2coeffs):
             print(f"Balanced: {i}")
-
+            print("--------")
+    
         return eq1coeffs, eq2coeffs
 
     @staticmethod
@@ -198,7 +204,7 @@ class MXeneBase:
             print("product from enumeration: {}".format(products))
 
         coeffs, coeffs_2balanc = cls._balance(reactants=reactants,
-                                              product=products,
+                                              products=products,
                                               i=i,
                                               solvers_check=solvers_check)  # the two lists will be mutually exclusive.
 
@@ -213,12 +219,12 @@ class MXeneBase:
         reactions = []
         reactions_2solver = []
 
-        for i, product in productiter:
+        for i, products in productiter:
             if verbosity >= 2:
-                print("trying to balance:\n{}---->{}".format("+".join(reactants), "+".join(product)))
+                print("trying to balance:\n{}---->{}".format("+".join(reactants), "+".join(products)))
 
             coeffs, coeffs_2balance = cls._balance(reactants=reactants,
-                                                   product=product,
+                                                   products=products,
                                                    i=i,
                                                    solvers_check=solvers_check)
             if coeffs:
@@ -230,17 +236,62 @@ class MXeneBase:
         return reactions, reactions_2solver
 
     @classmethod
-    def _paralleliter_balance_(cls, productiter, reactants, solvers_check=True, verbosity: int = 1, nproc: int = 1,
-                               mergesolvers=True):
+    def _paralleliter_balance_(cls, productiter,
+                               reactants,
+                               solvers_check=True,
+                               verbosity: int = 1,
+                               nproc: int = 1,
+                               mergesolvers=True,
+                               poolmap:str="imap",
+                               **kwargs):
+        silence = kwargs.pop("silence", True)
+        
+        if silence:
+            print(f"Solving the reactions for = {reactants}. will print the total balanced reactions at the end.")
+            verbosity = -1  # will silence the warning as well.
+        
+        funcobj = Parallelbalance(reactants=reactants, solvers_check=solvers_check, verbosity=verbosity)  # partial function quantities
+        
+        productiter = list(productiter)
+        reactions = []
+        reactions2_solver = []
 
-        funcobj = Parallelbalance(reactants=reactants, solvers_check=solvers_check)  # partial function quantities
+        if kwargs.get("chunksize", None) is None:
+            kwargs["chunksize"] = round(len(productiter)/(4*nproc))
+
         with Pool(nproc) as mp:
-            reactions, reactions2_solver = list(mp.imap(func=funcobj.actualfunc, iterable=productiter))
+            parallelmp = getattr(mp, poolmap)
+            # for showing the progress...
+            for result in tqdm(parallelmp(func=funcobj.actualfunc, iterable=productiter, **kwargs), total=len(productiter),
+                               desc="Processing"):
 
-        assert len(reactions) == len(reactions2_solver)
+                    if result[0]:
+                        reactions.append(result[0])
+                    elif result[-1]:
+                        reactions2_solver.append(result[-1])
+
+            # reactions, reactions2_solver = list(parallelmp(func=funcobj.actualfunc, iterable=productiter, **kwargs))
+
+        # assert len(reactions) == len(reactions2_solver)
+
         if mergesolvers:
             warnings.warn("Reactions from both solvers are merged into a single list,", UserWarning)
-            reactions = list(filter(lambda x: x[0] if x[0] else x[1], zip(reactions, reactions2_solver)))
+            # _reactions_ = []
+            # for reac0, reac2 in zip(reactions, reactions2_solver):
+            #     if reac0: # these are balanced by the first internal reaction balancer
+            #         assert not reac2
+            #         _reactions_.append(reac0)
+            #     elif reac2:
+            #         _reactions_.append(reac2)
+
+            # reactions = _reactions_
+            reactions.extend(reactions2_solver)
+            # reactions = list(filter(lambda x: x[0] if x[0] else x[1], zip(reactions, reactions2_solver)))
+
+        print("Stats:")
+        print("Total number of reactions: {}".format(len(reactions2_solver)))
+        print("Total number of balanced: {}".format(len(reactions)))
+
         return reactions
 
 
@@ -303,7 +354,7 @@ class MXeneReactions(MXeneBase):
         """
 
         def generate_products(species):
-            for i, sp in enumerate(species):
+            for i, sp in tqdm(enumerate(species),desc="Processing"):
                 yield i, [mxene.formula, sp, 'H']
 
         assert tipe in ["mxene", "tmxene"]
@@ -327,26 +378,36 @@ class MXeneReactions(MXeneBase):
             print("Species:\n{}".format(species))
 
         iterlst = generate_products(species)
-        reactions = []
+
         if not self.nproc:
-            for i, product in iterlst:
-                coeffs, coeffs_2balanc = self._balance(i=i,
-                                                       reactants=reactants,
-                                                       product=product,
-                                                       solvers_check=True)
-
-                if coeffs:
-                    reactions.append(coeffs)
-
-                elif coeffs_2balanc:
-                    reactions.append(coeffs_2balanc)
+            reactions, reactions_2solver = self._serialiter_balance_(productiter=iterlst,
+                                                                     reactants=reactants,
+                                                                     solvers_check=True,
+                                                                     verbosity=self.verbosity)
+            # for i, product in iterlst:
+            #     coeffs, coeffs_2balanc = self._balance(i=i,
+            #                                            reactants=reactants,
+            #                                            products=product,
+            #                                            solvers_check=True)
+            #
+            #     if coeffs:
+            #         reactions.append(coeffs)
+            #
+            #     elif coeffs_2balanc:
+            #         reactions.append(coeffs_2balanc)
 
         else:
-            func = partial(self._balance, reactants=reactants, solvers_check=True)
-            with Pool(self.nproc) as mp:
-                coeffs, coeffs_2balance = list(mp.imap(func, iterlst))
-                assert len(coeffs) == len(coeffs_2balance)
-                reactions = list(filter(lambda x: x[0] if x[0] else x[1], zip(coeffs, coeffs_2balance)))
+            # func = partial(self._balance, reactants=reactants, solvers_check=True)
+            # with Pool(self.nproc) as mp:
+            #     coeffs, coeffs_2balance = list(mp.imap(func, iterlst))
+            #     assert len(coeffs) == len(coeffs_2balance)
+            #     reactions = list(filter(lambda x: x[0] if x[0] else x[1], zip(coeffs, coeffs_2balance)))
+
+                reactions = self._paralleliter_balance_(productiter=iterlst,
+                                                        reactants=reactants,
+                                                        solvers_check=True,
+                                                        nproc=self.nproc,
+                                                        chunksize=len(species))
 
         if return_df:
             return reactions, DataFrame(reactions, columns=["reactants", "products"])
@@ -369,10 +430,11 @@ class MXeneReactions(MXeneBase):
         """
 
         def generate_products():
-            for i, product in enumerate(combine_compounds_multisize(sphase,
+            for i, product in tqdm(enumerate(combine_compounds_multisize(sphase,
                                                                     combination_size=sizelimits,
                                                                     necessary=None,
-                                                                    subset=pseduels)):
+                                                                    subset=pseduels)),
+                                                                    desc="Processing"):
                 yield i, [mxene.formula] + list(product)
 
         reactants = [self.max.formula] + self.solution.formula.tolist()
@@ -399,13 +461,13 @@ class MXeneReactions(MXeneBase):
         gen_iterproducts = generate_products()
 
         if not self.nproc:
-            for i, product in gen_iterproducts:
+            for i, products in gen_iterproducts:
 
                 if self.verbosity >= 2:
-                    print("product from enumeration: {}".format(product))
+                    print("product from enumeration: {}".format(products))
 
                 coeffs, coeffs_2balanc = self._balance(reactants=reactants,
-                                                       product=product,
+                                                       products=products,
                                                        i=i,
                                                        solvers_check=True)  # the two lists will be mutually exclusive.
                 if coeffs:
@@ -538,8 +600,9 @@ class MultiTermMXenReactions(MXeneReactions):
                 reac0, reac2 = self._get_mxene_reaction_enumerate(mxene=tmxene,
                                                                   return_df=return_df,
                                                                   allow_all=allow_all)
-                reactions.append(reac0)
-                reactions2solver.append(reac2)
+                # here we have to extend the list.
+                reactions.extend(reac0)
+                reactions2solver.extend(reac2)
                 termlengths[tmxene.term] = len(reactions) + len(reactions2solver)
 
             return reactions, reactions2solver
@@ -561,16 +624,18 @@ class MultiTermMXenReactions(MXeneReactions):
         """
 
         def generate_products():
-            for i, product in enumerate(combine_compounds_multisize(sphase,
+            for i, product in tqdm(enumerate(combine_compounds_multisize(sphase,
                                                                     combination_size=sizelimits,
                                                                     necessary=None,
-                                                                    subset=pseduels)):
+                                                                    subset=pseduels)),
+                                                                    desc="Processing"):
                 yield i, [mxene.formula] + list(product)
 
         reactants = [self.max.formula] + self.solution.formula.tolist()
         maxsize, els = self.get_number_allowed_products()
         sizelimits = list(range(1, maxsize))
         if self.verbosity >= 1:
+            print("Generation MXene ({}) enumerations for {}".format(mxene.formula,reactants))
             print("Size limits for the combination sizes is: {}".format(sizelimits))
 
         reactions = []  # output from solver 1
@@ -635,14 +700,15 @@ class MultiTermMXenReactions(MXeneReactions):
             reactions = self._paralleliter_balance_(productiter=gen_iterproducts,
                                                     reactants=reactants,
                                                     solvers_check=True,
-                                                    nproc=self.nproc)
+                                                    nproc=self.nproc,
+                                                    chunksize=None) # chunk size is setup dynamically
 
         if return_df:
             if reactions_2solver:
                 return reactions, DataFrame(reactions, columns=["reactants", "products"]), reactions_2solver, DataFrame(
                     reactions_2solver, columns=["reactants", "products"])
 
-        return reactions, reactions_2solver,
+        return reactions, reactions_2solver
 
     @property
     def get_tmxene_en(self):
@@ -651,8 +717,8 @@ class MultiTermMXenReactions(MXeneReactions):
         return energy
 
     def get_energies(self):
-        mxene_en, tmxene_en, max_en = super().get_energies()
-        assert tmxene_en is None
+        mxene_en, _, max_en = super().get_energies()
+        # assert tmxene_en is not None
         if self.tmxenes:
             tmxene_en = self.get_tmxene_en
 
@@ -664,9 +730,10 @@ class MXeneSidephaseReactions(MXeneBase):
     def get_reactions(self, solvers_check=True):
 
         def generate_iter_products():
-            for i, product in enumerate(combine_compounds_multisize(self.competing_phases.df.phase,
+            for i, product in tqdm(enumerate(combine_compounds_multisize(self.competing_phases.df.phase,
                                                                     combination_size=sizelimits,
-                                                                    necessary=els)):
+                                                                    necessary=els)),
+                                                                    desc="Processing"):
                 yield i, product
 
         reactions = []
@@ -676,6 +743,7 @@ class MXeneSidephaseReactions(MXeneBase):
         sizelimits = list(range(1, maxsize + 1))
 
         if self.verbosity >= 1:
+            print("Generating Side phase reactions for : {}".format(reactants))
             print("Size limits for the combination sizes is: {}".format(sizelimits))
 
         gen_iterproducts = generate_iter_products()
@@ -746,7 +814,8 @@ class MXeneSidephaseReactions(MXeneBase):
                                                     solvers_check=solvers_check,
                                                     verbosity=self.verbosity,
                                                     nproc=self.nproc,
-                                                    mergesolvers=True)
+                                                    mergesolvers=True,
+                                                    chunksize=None)
             # func = partial(self._balance, reactants=reactants, solvers_check=True)
 
             # with Pool(self.nproc) as mp:
@@ -759,7 +828,7 @@ class MXeneSidephaseReactions(MXeneBase):
         if reactions_2solver:
             return reactions, reactions_2solver
 
-        return reactions, None
+        return reactions, [] # to respect the legacy implementation.
 
     def _get_energies_fromsp(self, return_df=False):
         cp = self.competing_phases
@@ -888,8 +957,8 @@ class MXeneAnalyzer:
             print("Species:\n{}".format(species))
         reactions = []
         for i, sp in enumerate(species):  # will iterate over A-H chemical systems .......
-            product = [self.mxene.formula, sp, "H"]
-            coeffs, coeffs_2balanc = self._balance(reactants=reactants, product=product, i=i, solvers_check=True)
+            products = [self.mxene.formula, sp, "H"]
+            coeffs, coeffs_2balanc = self._balance(reactants=reactants, products=products, i=i, solvers_check=True)
             if coeffs_2balanc and not coeffs:
                 raise NotImplementedError(
                     "Unable to hand if both balancing solvers"" give different result:(check manually please the reaction)")
@@ -964,11 +1033,11 @@ class MXeneAnalyzer:
         return reactions, reactions_2solver
 
     def _balance(self, reactants,
-                 product,
+                 products,
                  i,
                  solvers_check=True):
 
-        eq1coeffs, eq2coeffs = Balance(reactants=reactants, product=product).balance(solvers_check=solvers_check)
+        eq1coeffs, eq2coeffs = Balance(reactants=reactants, products=products).balance(solvers_check=solvers_check)
         if eq1coeffs or eq2coeffs:
             print(f"Balanced: {i}")
 
@@ -980,7 +1049,7 @@ class MXeneAnalyzer:
             print("product from enumeration: {}".format(products))
 
         coeffs, coeffs_2balanc = self._balance(reactants=reactants,
-                                               product=products,
+                                               products=products,
                                                i=i,
                                                solvers_check=solvers_check)  # the two lists will be mutually exclusive.
 
@@ -1210,6 +1279,7 @@ class MXeneAnalyzerbetav1(MXeneReactions, MXeneSidephaseReactions):
         return df
 
     def get_reaction_energies(self):
+        # Todo: we have to handled energies in a better way, Chances of having bugs here are hige.
 
         en_mxene, en_tmxene, en_max, en_sp = self.get_energies()
         assert en_max
@@ -1286,6 +1356,61 @@ class MultiTermMXeneAnalyzerbetav1(MXeneAnalyzerbetav1, MultiTermMXenReactions):
 
         self.molenergies = molenergies
         self.etchantenergies = etchant_energies
+
+    def _get_reaction_energies_mxenes(self, energies_, en_sp, tipe="mxenes"):
+        # todo: either use unique_keys for the dictionaries, or shift to lists. This can still cause bug here.
+        #  better way would be to either generate index or energy along with the reaction balance and from the
+        #  index unique energies from the dataframe can be obtained. The index can be made unique using either
+        #  mpi-id or dataframe index. or simply directly use energy.
+
+        for reac in self.outputs[tipe]:
+
+            if reac:
+
+                append_dict1_dict2_exclusive(energies_, en_sp, reac[-1].keys(), exclude=[self.mxene.formula,
+                                                                                     *self.tmxenes.formula.tolist()])
+
+            # exclude both bare and terminate for mxene reactions, we should exlude, to make sure that,
+            # these energies are not overwritten.
+
+        rdf = self._calculate_reaction_enthalpies(self.outputs[tipe], energies=energies_, verbosity=self.verbosity)
+        rdf["type"] = "MXene"
+        return rdf
+
+    def get_reaction_energies(self):
+        # Todo: we have to handled energies in a better way, Chances of having bugs here are hige.
+
+        en_mxene, en_tmxene, en_max, en_sp = self.get_energies()
+        assert en_max
+
+        if "Tmxenes" in self.outputs:
+            assert en_tmxene
+
+        # reactant energies...
+        energies_reac = copy_append_dict(en_max, self.etchantenergies)
+
+        outputkeys = self.outputs.keys()
+        df = DataFrame()  # empty dataframe for saving the outputs..
+
+        # exclude max from en_sp.
+
+        en_sp.pop(self.max.formula, None)
+
+        for key in outputkeys:
+            if key in ["mxenes", "Tmxenes"]:
+                energies_ = {}
+                if key == "mxenes" or key == "Tmxenes":
+                    energies_ = copy_append_dict(energies_reac, en_mxene) # combinning energies of mxenes and Tmxenes together.
+                    energies_ = copy_append_dict(energies_, en_tmxene)
+                rdf = self._get_reaction_energies_mxenes(energies_, en_sp, tipe=key)
+                df = concat([df, rdf], axis=0, ignore_index=True)
+
+        keys = [i for i in outputkeys if i in ["sidereactions", "side2reactions"]]
+
+        df = concat([df, self._get_sidephase_energies_(energies_reac, en_sp, tipes=keys)], axis=0, ignore_index=True)
+
+        return df
+
 
 
 class MXenesAnalyzers:
