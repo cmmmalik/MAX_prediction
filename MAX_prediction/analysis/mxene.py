@@ -242,13 +242,19 @@ class MXeneBase:
                                verbosity: int = 1,
                                nproc: int = 1,
                                mergesolvers=True,
-                               poolmap:str="map",
+                               poolmap:str="imap",
                                **kwargs):
         silence = kwargs.pop("silence", True)
         
         if silence:
             print(f"Solving the reactions for = {reactants}. will print the total balanced reactions at the end.")
             verbosity = -1  # will silence the warning as well.
+        
+        funcobj = Parallelbalance(reactants=reactants, solvers_check=solvers_check, verbosity=verbosity)  # partial function quantities
+        
+        productiter = list(productiter)
+        reactions = []
+        reactions2_solver = []
         with Pool(nproc) as mp:
             parallelmp = getattr(mp, poolmap)
             # for showing the progress...
