@@ -87,12 +87,14 @@ class Parallelbalance:
     imap.
     """
 
-    def __init__(self, reactants, solvers_check) -> None:
-        self.func = partial(MXeneBase._balance, reactants=reactants, solvers_check=solvers_check, verbosity=0)
+    def __init__(self, reactants, solvers_check, verbosity:int=0) -> None:
+        self.func = partial(MXeneBase._balance, reactants=reactants, solvers_check=solvers_check, verbosity=verbosity)
+        self.verbosity = verbosity
 
     def actualfunc(self, iprod):
-        print(f"tying to balance Reaction No.: {iprod[0]}")
-        return  self.func(i=iprod[0], products=iprod[1])
+        if self.verbosity >= 1:
+            print(f"tying to balance Reaction No.: {iprod[0]}")
+        return self.func(i=iprod[0], products=iprod[1])
 
 
 class MXeneBase:
@@ -185,10 +187,10 @@ class MXeneBase:
                  solvers_check=True):
 
         eq1coeffs, eq2coeffs = Balance(reactants=reactants, products=products, verbosity=verbosity).balance(solvers_check=solvers_check)
-        if eq1coeffs or eq2coeffs:
+        if verbosity >= 0 and (eq1coeffs or eq2coeffs):
             print(f"Balanced: {i}")
             print("--------")
-
+    
         return eq1coeffs, eq2coeffs
 
     @staticmethod
@@ -244,6 +246,11 @@ class MXeneBase:
                                **kwargs):
 
         funcobj = Parallelbalance(reactants=reactants, solvers_check=solvers_check)  # partial function quantities
+        silence = kwargs.pop("silence", True)
+        
+        if silence:
+            print(f"Solving the reactions for = {reactants}. will print the total balanced reactions at the end.")
+            verbosity = -1  # will silence the warning as well.
         with Pool(nproc) as mp:
             parallelmp = getattr(mp, poolmap)
             # for showing the progress...
@@ -258,6 +265,11 @@ class MXeneBase:
         if mergesolvers:
             warnings.warn("Reactions from both solvers are merged into a single list,", UserWarning)
             reactions = list(filter(lambda x: x[0] if x[0] else x[1], zip(reactions, reactions2_solver)))
+
+        print("Stats:")
+        print("Total number of reactions: {}".format(len(reactions2_solver)))
+        print("Total number of balanced: {}".format(len(reactions)))
+
         return reactions
 
 
