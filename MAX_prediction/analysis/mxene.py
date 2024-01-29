@@ -708,7 +708,7 @@ class MultiTermMXenReactions(MXeneReactions):
                 return reactions, DataFrame(reactions, columns=["reactants", "products"]), reactions_2solver, DataFrame(
                     reactions_2solver, columns=["reactants", "products"])
 
-        return reactions, reactions_2solver,
+        return reactions, reactions_2solver
 
     @property
     def get_tmxene_en(self):
