@@ -828,7 +828,7 @@ class MXeneSidephaseReactions(MXeneBase):
         if reactions_2solver:
             return reactions, reactions_2solver
 
-        return reactions, None
+        return reactions, [] # to respect the legacy implementation.
 
     def _get_energies_fromsp(self, return_df=False):
         cp = self.competing_phases
