@@ -1279,6 +1279,7 @@ class MXeneAnalyzerbetav1(MXeneReactions, MXeneSidephaseReactions):
         return df
 
     def get_reaction_energies(self):
+        # Todo: we have to handled energies in a better way, Chances of having bugs here are hige.
 
         en_mxene, en_tmxene, en_max, en_sp = self.get_energies()
         assert en_max
