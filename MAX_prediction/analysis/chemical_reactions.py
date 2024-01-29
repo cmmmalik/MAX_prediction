@@ -32,10 +32,7 @@ def calculate_reaction_energy(reactants, products, energies: dict, verbosity: in
         print("reactants energy:{}".format(reactant_sum))
         print("product energy:{}".format(product_sum))
 
-        try:
-            print("Enthalpy: {}".format([diff[0], diff[-1]]))
-        except IndexError:
-            print("Enthalpy: {}".format(diff))
+        print("Enthalpy: {}".format(diff))
 
     return np.around(diff, decimtol)
 
