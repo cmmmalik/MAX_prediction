@@ -635,6 +635,7 @@ class MultiTermMXenReactions(MXeneReactions):
         maxsize, els = self.get_number_allowed_products()
         sizelimits = list(range(1, maxsize))
         if self.verbosity >= 1:
+            print("Generation MXene ({}) enumerations for {}".format(mxene.formula,reactants))
             print("Size limits for the combination sizes is: {}".format(sizelimits))
 
         reactions = []  # output from solver 1
@@ -742,6 +743,7 @@ class MXeneSidephaseReactions(MXeneBase):
         sizelimits = list(range(1, maxsize + 1))
 
         if self.verbosity >= 1:
+            print("Generating Side phase reactions for : {}".format(reactants))
             print("Size limits for the combination sizes is: {}".format(sizelimits))
 
         gen_iterproducts = generate_iter_products()
