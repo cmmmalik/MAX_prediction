@@ -75,7 +75,7 @@ class Balance:
             if self.verbosity >= 1:
                 print("Balanced:")
                 print(coeffs)
-            print()
+                print()
             eq1coeffs = coeffs
 
         except (LinearlydependentMatrix, AssertionError) as e:
