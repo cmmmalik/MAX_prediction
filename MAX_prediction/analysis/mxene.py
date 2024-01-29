@@ -264,15 +264,29 @@ class MXeneBase:
             # for showing the progress...
             for result in tqdm(parallelmp(func=funcobj.actualfunc, iterable=productiter, **kwargs), total=len(productiter),
                                desc="Processing"):
-                    reactions.append(result[0])
-                    reactions2_solver.append(result[-1])
+
+                    if result[0]:
+                        reactions.append(result[0])
+                    elif result[-1]:
+                        reactions2_solver.append(result[-1])
 
             # reactions, reactions2_solver = list(parallelmp(func=funcobj.actualfunc, iterable=productiter, **kwargs))
 
-        assert len(reactions) == len(reactions2_solver)
+        # assert len(reactions) == len(reactions2_solver)
+
         if mergesolvers:
             warnings.warn("Reactions from both solvers are merged into a single list,", UserWarning)
-            reactions = list(filter(lambda x: x[0] if x[0] else x[1], zip(reactions, reactions2_solver)))
+            # _reactions_ = []
+            # for reac0, reac2 in zip(reactions, reactions2_solver):
+            #     if reac0: # these are balanced by the first internal reaction balancer
+            #         assert not reac2
+            #         _reactions_.append(reac0)
+            #     elif reac2:
+            #         _reactions_.append(reac2)
+
+            # reactions = _reactions_
+            reactions.extend(reactions2_solver)
+            # reactions = list(filter(lambda x: x[0] if x[0] else x[1], zip(reactions, reactions2_solver)))
 
         print("Stats:")
         print("Total number of reactions: {}".format(len(reactions2_solver)))
@@ -586,8 +600,9 @@ class MultiTermMXenReactions(MXeneReactions):
                 reac0, reac2 = self._get_mxene_reaction_enumerate(mxene=tmxene,
                                                                   return_df=return_df,
                                                                   allow_all=allow_all)
-                reactions.append(reac0)
-                reactions2solver.append(reac2)
+                # here we have to extend the list.
+                reactions.extend(reac0)
+                reactions2solver.extend(reac2)
                 termlengths[tmxene.term] = len(reactions) + len(reactions2solver)
 
             return reactions, reactions2solver
