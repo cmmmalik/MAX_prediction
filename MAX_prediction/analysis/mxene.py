@@ -244,8 +244,6 @@ class MXeneBase:
                                mergesolvers=True,
                                poolmap:str="map",
                                **kwargs):
-
-        funcobj = Parallelbalance(reactants=reactants, solvers_check=solvers_check)  # partial function quantities
         silence = kwargs.pop("silence", True)
         
         if silence:
