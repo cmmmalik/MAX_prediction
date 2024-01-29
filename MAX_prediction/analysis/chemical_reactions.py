@@ -86,26 +86,31 @@ class Balance:
             return None, None
 
         except Exception as ex:
-            print(ex)
+            if self.verbosity >= 0:
+                print(ex)
+            
             if solvers_check:
                 try:
                     coeffs = balance_stoichiometry(reactants=reactants, products=product, underdetermined=None)
-                    print(Fore.BLUE + "the chempy solver balanced the reaction")
+                    if self.verbosity >= 0:
+                        print(Fore.BLUE + "the chempy solver balanced the reaction")
 
                     product_out = coeffs[-1]
                     reactant_out = coeffs[0]
                     neg_coef = self._check_negative_coeffs(product_out=product_out, reactant_out=reactant_out)
                     if neg_coef:
                         return None, None
-
-                    print("Balanced by (2):")
+                    
+                    if self.verbosity >= 0:
+                        print("Balanced by (2):")
                     if self.verbosity >= 1:
                         print(coeffs)
 
                     eq2coeffs = coeffs
                 except Exception as ex:
-                    print(ex)
-                    print(Fore.RED + "Couldn't balance by both solvers")
+                    if self.verbosity >= 0:
+                        print(ex)
+                        print(Fore.RED + "Couldn't balance by both solvers")
 
         if not eq2coeffs and not eq1coeffs:
             if self.verbosity >= 2:
