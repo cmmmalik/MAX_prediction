@@ -752,7 +752,7 @@ class MXeneSidephaseReactions(MXeneBase):
     def get_reactions(self, solvers_check=True):
 
         def generate_iter_products():
-            for i, product in tqdm(enumerate(combine_compounds_multisize(self.competing_phases.df.phase,
+            for i, product in tqdm(enumerate(combine_compounds_multisize(pr_df,
                                                                     combination_size=sizelimits,
                                                                     necessary=els)),
                                                                     desc="Processing"):
@@ -763,11 +763,18 @@ class MXeneSidephaseReactions(MXeneBase):
         reactants = [self.max.formula] + self.solution.formula.tolist()  # the reactants are fixed in this case
         maxsize, els = self.get_number_allowed_products()
         sizelimits = list(range(1, maxsize + 1))
+        # here we exclude the reactants from the side phases calling it product_list here...
+        pr_df  = self.competing_phases.df.phase
 
         if self.verbosity >= 1:
             print("Generating Side phase reactions for : {}".format(reactants))
             print("Size limits for the combination sizes is: {}".format(sizelimits))
             print("Competing phases original (without any filtering): {}".format(len(pr_df)))
+
+        pr_df = pr_df[~pr_df.isin(reactants)]
+        if self.verbosity >= 1:
+            print("Competing phases after removing reactants from the dataframe: {}".format(len(pr_df)))
+            print(pr_df)
 
         gen_iterproducts = generate_iter_products()
 
