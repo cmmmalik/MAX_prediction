@@ -246,6 +246,15 @@ class MXeneBase:
             elif coeffs_2balance:
                 reactions_2solver.append(coeffs_2balance)
 
+        if mergesolvers:
+            warnings.warn("Reactions from both solvers are merged into a single list,", UserWarning)
+            reactions.extend(reactions_2solver)
+            reactions_2solver = []
+
+        print("Stats:")
+        print("Total number of reactions: {}".format(len(productiter)))
+        print("Total number of balanced: {}".format(len(reactions)))
+
         return reactions, reactions_2solver
 
     @classmethod
