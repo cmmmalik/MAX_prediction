@@ -267,7 +267,7 @@ class MXeneBase:
                                poolmap:str="imap",
                                **kwargs):
         silence = kwargs.pop("silence", True)
-        
+        print(Fore.RED + "Parallel processing over: {}".format(nproc))
         if silence:
             print(f"Solving the reactions for = {reactants}. will print the total balanced reactions at the end.")
             verbosity = -1  # will silence the warning as well.
