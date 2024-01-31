@@ -1421,9 +1421,8 @@ class MultiTermMXeneAnalyzerbetav1(MXeneAnalyzerbetav1, MultiTermMXenReactions):
         outputkeys = self.outputs.keys()
         df = DataFrame()  # empty dataframe for saving the outputs..
 
-        # exclude max from en_sp.
-
-        en_sp.pop(self.max.formula, None)
+        # exclude reactants from from en_sp.
+        [en_sp.pop(i, None) for i in self._reactants_]
 
         for key in outputkeys:
             if key in ["mxenes", "Tmxenes"]:
