@@ -213,7 +213,7 @@ class MXeneBase:
 
     @property
     def _reactants_(self):
-        return [self.max.formula] + [self.solution.formula.tolist()]
+        return [self.max.formula] + self.solution.formula.tolist()
 
     @classmethod
     def _serialiter_balance_(cls, productiter, reactants, solvers_check=True, verbosity: int = 1):
