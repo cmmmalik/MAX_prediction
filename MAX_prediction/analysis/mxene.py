@@ -1304,7 +1304,7 @@ class MXeneAnalyzerbetav1(MXeneReactions, MXeneSidephaseReactions):
         for tipe in tipes:
             rdf = self._calculate_reaction_enthalpies(reactions=self.outputs[tipe],
                                                       energies=energies_,
-                                                      verbosity=self.verbosity)
+                                                      verbosity=self.verbosity-1)
             df = concat([df, rdf], axis=0, ignore_index=True)
         return df
 
