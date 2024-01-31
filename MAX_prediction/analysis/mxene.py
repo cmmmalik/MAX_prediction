@@ -216,18 +216,30 @@ class MXeneBase:
         return [self.max.formula] + self.solution.formula.tolist()
 
     @classmethod
-    def _serialiter_balance_(cls, productiter, reactants, solvers_check=True, verbosity: int = 1):
+    def _serialiter_balance_(cls, productiter, reactants, solvers_check=True, verbosity: int = 1,
+                             mergesolvers=True, **kwargs):
+
+        silence = kwargs.pop("silence", True)
+        print("{}Serial processing".format(Fore.RED))
         reactions = []
         reactions_2solver = []
 
-        for i, products in productiter:
+        productiter = list(productiter)
+
+        if silence:
+            print(f"Solving the reactions for = {reactants}. will print the total balanced reactions at the end.")
+            verbosity = -1  # will silence the warning as well.
+
+        for i, products in tqdm(productiter, total=len(productiter)):
+
             if verbosity >= 2:
                 print("trying to balance:\n{}---->{}".format("+".join(reactants), "+".join(products)))
 
             coeffs, coeffs_2balance = cls._balance(reactants=reactants,
                                                    products=products,
                                                    i=i,
-                                                   solvers_check=solvers_check)
+                                                   solvers_check=solvers_check,
+                                                   verbosity=verbosity)
             if coeffs:
                 reactions.append(coeffs)
 
