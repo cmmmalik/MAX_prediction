@@ -784,10 +784,10 @@ class MXeneSidephaseReactions(MXeneBase):
                                                                      solvers_check=solvers_check,
                                                                      verbosity=self.verbosity)
 
-            print(Fore.RED + "Reactions unbalanced by first solver '{}' "
-                             "are also unbalanced by second solver '{}'".format(
-                equation_balancer_v2.__name__,
-                balance_stoichiometry.__name__))
+            # print(Fore.RED + "Reactions unbalanced by first solver '{}' "
+            #                  "are also unbalanced by second solver '{}'".format(
+            #     equation_balancer_v2.__name__,
+            #     balance_stoichiometry.__name__))
             # for i, product in gen_iterproducts:
             #     print("trying to balance:\n{}---->{}".format("+".join(reactants), "+".join(product)))
             # try:
