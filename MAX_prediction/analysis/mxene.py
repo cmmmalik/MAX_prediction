@@ -311,7 +311,7 @@ class MXeneBase:
             # reactions = list(filter(lambda x: x[0] if x[0] else x[1], zip(reactions, reactions2_solver)))
 
         print("Stats:")
-        print("Total number of reactions: {}".format(len(reactions2_solver)))
+        print("Total number of reactions: {}".format(len(productiter)))
         print("Total number of balanced: {}".format(len(reactions)))
 
         return reactions
@@ -767,6 +767,7 @@ class MXeneSidephaseReactions(MXeneBase):
         if self.verbosity >= 1:
             print("Generating Side phase reactions for : {}".format(reactants))
             print("Size limits for the combination sizes is: {}".format(sizelimits))
+            print("Competing phases original (without any filtering): {}".format(len(pr_df)))
 
         gen_iterproducts = generate_iter_products()
 
