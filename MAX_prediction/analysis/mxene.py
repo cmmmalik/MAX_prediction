@@ -1402,7 +1402,7 @@ class MultiTermMXeneAnalyzerbetav1(MXeneAnalyzerbetav1, MultiTermMXenReactions):
             # exclude both bare and terminate for mxene reactions, we should exlude, to make sure that,
             # these energies are not overwritten.
 
-        rdf = self._calculate_reaction_enthalpies(self.outputs[tipe], energies=energies_, verbosity=self.verbosity)
+        rdf = self._calculate_reaction_enthalpies(self.outputs[tipe], energies=energies_, verbosity=self.verbosity-1)
         rdf["type"] = "MXene"
         return rdf
 
