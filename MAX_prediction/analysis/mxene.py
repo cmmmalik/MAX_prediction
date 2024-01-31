@@ -1324,7 +1324,6 @@ class MXeneAnalyzerbetav1(MXeneReactions, MXeneSidephaseReactions):
         df = DataFrame()  # empty dataframe for saving the outputs..
 
         # exclude max from en_sp.
-
         en_sp.pop(self.max.formula, None)
 
         for key in outputkeys:
