@@ -7,7 +7,7 @@ from multiprocessing import Pool
 
 import numpy as np
 from chempy import balance_stoichiometry
-from colorama import Fore
+from colorama import Fore, Style, init
 from mse.analysis.chemical_equations import equation_balancer_v2
 from pandas import DataFrame, concat, Series
 from pymatgen.core import periodic_table
@@ -21,6 +21,7 @@ from .chemical_reactions import Balance, calculate_reaction_energy
 from .specifics import MAXSpecies
 from .specifics import MXeneSpecie, MXeneSpecies, Sidephases, NewElements
 
+init(autoreset=True)
 
 # from IPython.display import Markdown
 # ToDO: shift/move this specific implementatins to a separate package.
