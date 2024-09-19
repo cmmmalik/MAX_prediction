@@ -65,3 +65,5 @@ class Elements(Species):
         return Elements(elements)
 
 
+def get_elements(formula):
+    return Elements.from_formula(formula).els
