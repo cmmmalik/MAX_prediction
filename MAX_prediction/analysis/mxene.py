@@ -384,8 +384,7 @@ class MXeneReactions(MXeneBase):
         reactants = self._reactants_
         mxene = getattr(self, tipe)
         maxmapp = mxene.max.elementsmap
-        warnings.warn(
-            "Considering only a reaction in which MXene+A-F+H2 is formed")
+        warnings.warn("Considering only a reaction in which MXene+A-F+H2 is formed")
         els_sol = self.solution.unique_elements()
         warnings.warn("Expects 'H-Halogen' type etchant")
         assert "H" in els_sol and any([periodic_table.Element(i).is_halogen for i in els_sol])
