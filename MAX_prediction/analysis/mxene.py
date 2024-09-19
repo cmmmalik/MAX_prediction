@@ -266,6 +266,7 @@ class MXeneBase:
                                mergesolvers=True,
                                poolmap:str="imap",
                                **kwargs):
+        
         silence = kwargs.pop("silence", True)
         print(Fore.RED + "Parallel processing over: {}".format(nproc))
         if silence:
