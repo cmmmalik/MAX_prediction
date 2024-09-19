@@ -293,7 +293,6 @@ class MXeneBase:
                         reactions2_solver.append((result[-1], "solver2"))
 
             # reactions, reactions2_solver = list(parallelmp(func=funcobj.actualfunc, iterable=productiter, **kwargs))
-
         # assert len(reactions) == len(reactions2_solver)
 
         if mergesolvers:
@@ -315,7 +314,7 @@ class MXeneBase:
         print("Total number of balanced: {}".format(len(reactions)))
 
         return reactions
-
+       
 
 class MXeneReactions(MXeneBase):
 
