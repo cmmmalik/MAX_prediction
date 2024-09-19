@@ -88,7 +88,7 @@ class Parallelbalance:
     imap.
     """
 
-    def __init__(self, reactants, solvers_check, verbosity:int=0) -> None:
+    def __init__(self, reactants, solvers_check, verbosity:int=1) -> None:
         self.func = partial(MXeneBase._balance, reactants=reactants, solvers_check=solvers_check, verbosity=verbosity)
         self.verbosity = verbosity
 
