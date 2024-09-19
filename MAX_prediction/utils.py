@@ -1,3 +1,5 @@
+import re
+
 from itertools import combinations as itcombinations
 
 
