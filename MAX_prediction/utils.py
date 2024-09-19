@@ -14,6 +14,10 @@ def check_MAXlikecomp(comp):
 def sortfuncchemsys(value):
     return "-".join(sorted(value.split("-")))
 
+def sort_chemsys(chemsys, separator=","):
+    chemsys = chemsys.split(separator)
+    return f"{separator}".join(sorted(chemsys))
+
 
 class Genchemicalsystems:
 
