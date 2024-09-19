@@ -1,6 +1,6 @@
 import warnings
 
-from MAX_prediction.analysis.mxene import MXeneAnalyzers_beta
+from MAX_prediction.analysis.mxenecollections import MXeneAnalyzers_beta
 from .tarpickle_io import PickleTarLoggerCollections
 from .hdf5_io import HDF5LoggerCollections
 
