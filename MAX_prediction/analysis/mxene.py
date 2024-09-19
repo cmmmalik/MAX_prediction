@@ -474,7 +474,7 @@ class MXeneReactions(MXeneBase):
         print("No. of phases after (removing MXene and T-MXene compositions): {}".format(len(sphase)))
 
         mxene = getattr(self, tipe)
-        mxene_els = self.mxene.elements.unique_elements()  # unterminated Elements
+        mxene_els = self.mxene.Elements.unique_elements()  # unterminated Elements
 
         if not allow_all:
             pseduels = [i for i in els if i not in mxene_els]
