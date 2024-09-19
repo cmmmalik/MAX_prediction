@@ -93,6 +93,10 @@ class MAXSpecie(CoreSpecie):
             sizes = [i for i in range(2, self.Elements.unique_els().shape[0])]
         return self._genchemsys.unique_combinations_sizes(sizes=sizes)
 
+    def get_mxene_formula(self):
+        Acomp = Pymcomp(self.elementsmap["A"])
+        mxenecomp = (self.composition - Acomp).iupac_formula.replace(" ", "")
+        return mxenecomp
 
 class MAXSpecies(Species):
     coresp = MAXSpecie
