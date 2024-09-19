@@ -241,10 +241,10 @@ class MXeneBase:
                                                    solvers_check=solvers_check,
                                                    verbosity=verbosity)
             if coeffs:
-                reactions.append(coeffs)
+                reactions.append((coeffs, "solver1"))
 
             elif coeffs_2balance:
-                reactions_2solver.append(coeffs_2balance)
+                reactions_2solver.append((coeffs_2balance, "solver2"))
 
         if mergesolvers:
             warnings.warn("Reactions from both solvers are merged into a single list,", UserWarning)
