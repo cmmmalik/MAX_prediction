@@ -399,6 +399,8 @@ class MXeneReactions(MXeneBase):
             print("Species:\n{}".format(species))
 
         iterlst = generate_products(species)
+        reactions = [] # output from solver 1
+        reactions_2solver = [] # output from solver 2
 
         if not self.nproc:
             reactions, reactions_2solver = self._serialiter_balance_(productiter=iterlst,
@@ -431,8 +433,12 @@ class MXeneReactions(MXeneBase):
                                                         chunksize=len(species))
 
         if return_df:
-            return reactions, DataFrame(reactions, columns=["reactants", "products"])
-        return reactions
+            if reactions_2solver:
+                return reactions, DataFrame(reactions, columns=["reactants", "products"]), reactions_2solver, DataFrame(reactions_2solver, columns=["reactants", "products"])
+            else:
+                return reactions, DataFrame(reactions, columns=["reactants", "products"])
+        
+        return reactions, reactions_2solver
 
     def get_mxene_reaction_enumerate(self,
                                      tipe="mxene",
@@ -516,7 +522,11 @@ class MXeneReactions(MXeneBase):
 
     def get_reactions(self, return_df=False):
         for key, tipe in zip(["mxenes", "Tmxenes"], ["mxene", "tmxene"]):
-            self.outputs[key] = self.get_mxene_reactions(tipe=tipe, return_df=return_df)
+            reactions1,  reaction2solver = self.get_mxene_reactions(tipe=tipe, return_df=False)
+            if reaction2solver:
+                reactions1 += reaction2solver
+            
+            self.outputs[key] = reactions1
 
     def get_reactions_enumerate(self):
         for key, tipe in zip(["mxenes", "Tmxenes"], ["mxene", "tmxene"]):

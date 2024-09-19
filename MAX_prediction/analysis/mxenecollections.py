@@ -265,6 +265,31 @@ class MXeneAnalyzers_beta(MXenesAnalyzersBase):
 
             except Exception as ex:
                 print(f"Encountered Exception:\n{ex}")
+    
+    def get_mxene_reactions_index(self, index):
+        self.set_side_phasesdf_index(index=index)
+        lyzer = self.analyzers[index]
+        
+        logger = self.logger
+        if logger:
+            logger.check_read_data_index(index=index)
+        
+        if not lyzer.outputs:
+            self.__classreac__.get_reactions(self=lyzer)
+            logger.mode = "w"
+            logger.write_index_(index=index, whether_energies=True, etchantenergies=None)
+        
+    
+    def get_mxene_reactions(self):
+        for index in range(len(self.analyzers)):
+            self.get_mxene_reactions_index(index=index)
+        if self.logger:
+            try:
+                self.logger.merge()
+            
+            except Exception as ex:
+                print(f"Encountererd Exception:\n{ex}")
+                raise ex
 
 class MXeneAnalyzers_betaLegacy(MXeneAnalyzers_beta):
     """
