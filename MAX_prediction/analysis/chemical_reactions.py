@@ -14,6 +14,12 @@ def calculate_reaction_energy(reactants, products, energies: dict, verbosity: in
             ssumlst.append(co * energies[sp])
         return ssumlst
 
+    def do_sum_lst(lst):
+        outs = 0
+        for i in lst:
+            outs +=i
+        return outs
+
     assert all([i in energies for i in itchain(reactants.keys(), products.keys())])
     reactant_sum = _get_sum(coeffs=reactants, energies=energies)
     product_sum = _get_sum(coeffs=products, energies=energies)
