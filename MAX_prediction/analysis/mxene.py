@@ -288,9 +288,9 @@ class MXeneBase:
                                desc="Processing"):
 
                     if result[0]:
-                        reactions.append(result[0])
+                        reactions.append((result[0], "solver1"))
                     elif result[-1]:
-                        reactions2_solver.append(result[-1])
+                        reactions2_solver.append((result[-1], "solver2"))
 
             # reactions, reactions2_solver = list(parallelmp(func=funcobj.actualfunc, iterable=productiter, **kwargs))
 
