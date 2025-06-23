@@ -53,7 +53,15 @@ class Balance:
         if allow_reactant0:
             self._allowzero = allow_reactant0
 
+    def check_duplicates(self):
+        return len(self.products) != len(set(self.products)) or len(self.reactants) != len(set(self.reactants))
+
+
     def balance(self, solvers_check=True,):
+        if self.check_duplicates():
+            print("We have duplicates in the reactants or products")
+            return None, None
+
         reactants = self.reactants
         product = self.products
 
