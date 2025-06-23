@@ -106,7 +106,8 @@ class CoreSpecie:
 
     @property
     def energy_per_formula(self):
-        return self.row.energy_per_formula
+ #       return self.row.energy_per_formula
+        return self.get_energy_formula()
 
     @property
     def energy_per_atom(self):
