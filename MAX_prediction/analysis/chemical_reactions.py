@@ -72,10 +72,11 @@ class Balance:
             print("trying to balance")
             print(f"{'+'.join(reactants)} -------> {'+ '.join(product)}")
         try:
-            _, coeffs = equation_balancer_v3(reactants=reactants,
+            _, coeffs = equation_balancer_v2(reactants=reactants,
                                              products=product,
                                              verbosity=0,
-                                             allowed_zeros=self._allowzero)
+                                            )
+                                             #allowed_zeros=self._allowzero)
 
 
             product_out = coeffs[-1]
