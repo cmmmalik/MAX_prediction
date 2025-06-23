@@ -42,7 +42,7 @@ def calculate_reaction_energy(reactants, products, energies: dict, verbosity: in
 
     return np.around(diff, decimtol)
 
-
+# to do we need constructor for this
 class Balance:
 
     def __init__(self, reactants, products, verbosity:int=1, allow_reactant0:list=None):
