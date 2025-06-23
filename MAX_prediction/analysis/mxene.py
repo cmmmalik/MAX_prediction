@@ -1315,21 +1315,32 @@ class MXeneAnalyzerbetav1(MXeneReactions, MXeneSidephaseReactions):
         #  mpi-id or dataframe index. or simply directly use energy.
 
         for reac in self.outputs[tipe]:
-            append_dict1_dict2_exclusive(energies_, en_sp, reac[-1].keys(), exclude=[self.mxene.formula,
+            append_dict1_dict2_exclusive(energies_, en_sp, reac[0][-1].keys(), exclude=[self.mxene.formula,
                                                                                      self.tmxene.formula])
             # exclude both BAre and Terminatec
-        rdf = self._calculate_reaction_enthalpies(self.outputs[tipe], energies=energies_, verbosity=self.verbosity)
+        reactions, solvers = zip(*self.outputs[tipe])
+        print("debug", reactions)
+
+        rdf = self._calculate_reaction_enthalpies(reactions, energies=energies_, verbosity=self.verbosity)
         rdf["type"] = "MXene"
+        rdf["solvertype"] = solvers
         return rdf
 
     def _get_sidephase_energies_(self, energies_reac, energies_sp, tipes: list):
         energies_ = copy_append_dict(energies_reac, energies_sp)
         df = DataFrame()
         for tipe in tipes:
-            rdf = self._calculate_reaction_enthalpies(reactions=self.outputs[tipe],
+            
+            if not self.outputs[tipe]:
+                continue
+
+            reactions, solvers = zip(*self.outputs[tipe])
+            rdf = self._calculate_reaction_enthalpies(reactions=reactions,
                                                       energies=energies_,
                                                       verbosity=self.verbosity-1)
+            rdf["solvertype"] = solvers
             df = concat([df, rdf], axis=0, ignore_index=True)
+        df["type"] = "sp"
         return df
 
     def get_reaction_energies(self):
