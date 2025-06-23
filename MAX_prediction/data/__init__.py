@@ -21,3 +21,19 @@ def read_file(specie:str, file=None):
 
     csvstr = io.StringIO(data)
     return read_csv(csvstr, delimiter=",")
+
+def read_file_nbscsv(specie:str, file):
+    data = ""
+    #get the header...
+    columns = "Formula,Solvent,Name,State Description,State,Molar Mass, deltafHf0°,deltafH°,deltafG°,H°-H0°,S°,Cp"
+    with open(file, "r") as ff:
+        for line in ff:
+            if line.startswith(f"{specie}"):
+                for ll in ff:
+                    if ll.startswith("Table"):
+                        break
+                    data += ll
+                break
+
+    csvstr = io.StringIO(data)
+    return read_csv(csvstr, delimiter=",", columns=columns.split(","))
