@@ -6,7 +6,7 @@ from functools import cached_property
 from mse.composition_utils import MXene
 from pandas import DataFrame
 from pymatgen.core import Composition
-from utils_asedatabase import assertrowslen
+# from MAX_prediction.dctutils import assertrowslen
 
 # from MAX_prediction.Database import SearchEnginenewapi
 # from MAX_prediction.Database import converttoformula_chemsysrows
@@ -14,8 +14,8 @@ from MAX_prediction.base import MAXSpecie, MAXSpecies, Pandasutils
 from MAX_prediction.core.specie import CoreSpecie
 from MAX_prediction.core.species import Species
 from MAX_prediction.elements import Elements
-from MAX_prediction.utils import check_MAXlikecomp
-from MAX_prediction.utils import sortfuncchemsys
+# from MAX_prediction.utils import check_MAXlikecomp
+# from MAX_prediction.utils import sortfuncchemsys
 
 
 def get_elements_chemical_systems(chemical_systems: list):
@@ -251,6 +251,8 @@ class SidephasesCore(Species):
         :param rows_chemsys: dict, {chemsys, list}
         :return: None
         """
+        from MAX_prediction.Database import converttoformula_chemsysrows
+
         rows_formula = converttoformula_chemsysrows(rows_chemsys)
         for k, ros in rows_formula.items():
             assert len(ros) == 1
@@ -302,6 +304,9 @@ class SidephasesCore(Species):
         return df
 
     def remove_max_compositions(self, maxphases: list or tuple, df: DataFrame):
+
+        from MAX_prediction.utils import check_MAXlikecomp
+
         formulafunc = lambda x: Composition(x).reduced_composition.iupac_formula.replace(" ", "")
         phases = df.phase.apply(formulafunc)
         sg = df.spacegroup
@@ -426,6 +431,9 @@ class Sidephases(SidephasesCore):  # this class could be problem specific
                                                          elemental_energies=elemental_row_energies)
 
     def get_side_phases_chemsys(self, chemical_systems):
+
+        from MAX_prediction.utils import sortfuncchemsys
+
         schemsys = [sortfuncchemsys(i) for i in chemical_systems]
         els = get_elements_chemical_systems(schemsys)  # include elements as well
         schemsys = schemsys + els
@@ -434,6 +442,8 @@ class Sidephases(SidephasesCore):  # this class could be problem specific
         return self.df.loc[self.df["chemsys"].isin(schemsys)]
 
     def get_set_rows(self, asedb=None):
+        from MAX_prediction.dctutils import assertrowslen
+
         rowsdict = self.search_in_asedb(asedb=asedb)
         assertrowslen(rowsdict)
         self.set_rows(rowsdict=rowsdict)
@@ -479,6 +489,9 @@ class SidephaseMAX(MAXSpecies, Sidephases):
 class NewElements(NewElements):  # customized user defined classes to implement specific functions.
 
     def get_set_elementalrows(self, dummyrows: dict = {}):
+
+        from MAX_prediction.dctutils import assertrowslen
+
         elrows = self.search_in_asedb()
 
         if dummyrows:
@@ -494,6 +507,8 @@ class NewElements(NewElements):  # customized user defined classes to implement 
 
     def setup_mongo_elements(self, config):
         from MAX_prediction.io.utils import filter_lowesten_mongodb_entries
+        from MAX_prediction.dctutils import assertrowslen
+
         self.connect_mongo(**config)  # get the Mongodb elements
         elentries = self.search_in_mpdb()
         # here we sort them based and select the lowest energy element entry...
