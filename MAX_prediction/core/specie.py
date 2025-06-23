@@ -127,4 +127,4 @@ class CoreSpecie:
         :return:
         """
         en = self.row.energy_per_atom
-        return en * Composition(self.formula).num_atoms
+        return en * self.composition.num_atoms
