@@ -206,6 +206,7 @@ class DataFramePickleTarLogger(PickleTarLoggerCollections):
         self._phase_index = {}
         self.df = None
         self.mode = "r"
+        self.format = "pkl"
 
         assert tmpfolder or tarfolder
 
@@ -253,6 +254,10 @@ class DataFramePickleTarLogger(PickleTarLoggerCollections):
     def phases(self, value):
         self._phases = value
         self._phase_index = {k: i for i, k in enumerate(value)}
+
+    def set_format(self, value):
+        assert value in ["csv", "pickle"]
+        self.format = value
 
     def _pklfile_index(self, index):
         assert self._phase_index[self.phases[index]] == index
