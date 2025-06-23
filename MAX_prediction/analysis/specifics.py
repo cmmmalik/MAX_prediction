@@ -122,13 +122,13 @@ class MXeneSpecies(MAXSpecies):
 
     @formula.setter
     def formula(self, value):
-        if all([isinstance(v, MXeneSpecie) for v in value]):
+        if all([isinstance(v, self.__class__.coresp) for v in value]):
             formula = [v.formula for v in value]
             self._composition = value
             self._formula = np.asarray(formula)
 
         else:
-            self._composition = [MXeneSpecie(i) for i in value]
+            self._composition = [self.__class__.coresp(i) for i in value]
             self._formula = np.asarray(value)
         # maxformulas = self.get_maxformula()
         # MAXSpecies(maxformulas)
