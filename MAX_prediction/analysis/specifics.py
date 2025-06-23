@@ -69,6 +69,10 @@ class MXeneSpecie(CoreSpecie):
 
     @property
     def elements(self):
+        return self._elements.els
+
+    @property
+    def Elements(self):
         return self._elements
 
     @property
