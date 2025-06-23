@@ -3,7 +3,7 @@ import warnings
 from collections import OrderedDict
 from itertools import combinations as itcombinations
 
-import cohesive
+# import cohesive
 import numpy as np
 from MAX_prediction.core.species import Species, CoreSpecie
 from MAX_prediction.elements import Elements
@@ -1426,6 +1426,9 @@ def calculate_total_energy_from_formation_energy(comp: str, en: float, elemental
     # Potential bug, if the formation
     warnings.warn("Make sure the formation energy, input (en) is -1*formation_energy of the phase", UserWarning)
 
+    import cohesive
+
+
     if isinstance(comp, str):
         comp = Pycomp(comp)
     energies = {el: elemental_energies[el] for el in comp.get_el_amt_dict().keys()}
@@ -1435,6 +1438,9 @@ def calculate_total_energy_from_formation_energy(comp: str, en: float, elemental
 
 
 def calculate_formation_energy(comp: str, en_comp: float, elemental_energies: dict, verbosity: int = 1):
+
+    import cohesive
+
     assert Pymcomp(comp).reduced_composition == Pymcomp(comp)
     energies = {el: elemental_energies[el] for el in Pymcomp(comp).get_el_amt_dict().keys()}
     energies.update({comp: en_comp})
