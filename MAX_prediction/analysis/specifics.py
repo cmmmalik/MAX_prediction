@@ -63,7 +63,7 @@ class MXeneSpecie(CoreSpecie):
         if not isinstance(value, str):
             raise TypeError(f"Expected an instance of {str}, but got {type(value)}")
         self._formula = value
-        self._composition = MXene(value)
+        self._composition = self.__class__.__mxenefunc(value)
         self._elements = Elements.from_formula(formula=value)
         assert sorted(self._elements.unique_els()) == sorted(self.composition.comp.get_el_amt_dict().keys())
 
