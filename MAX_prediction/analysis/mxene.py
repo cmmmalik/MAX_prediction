@@ -8,6 +8,7 @@ from multiprocessing import Pool
 import numpy as np
 from chempy import balance_stoichiometry
 from colorama import Fore, Style, init
+from MAX_prediction.analysis.specifics import MAXSpecies, MXeneSpecies, Sidephases
 from mse.analysis.chemical_equations import equation_balancer_v2
 from pandas import DataFrame, concat, Series
 from pymatgen.core import periodic_table
