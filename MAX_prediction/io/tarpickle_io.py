@@ -261,7 +261,7 @@ class DataFramePickleTarLogger(PickleTarLoggerCollections):
 
     def _pklfile_index(self, index):
         assert self._phase_index[self.phases[index]] == index
-        return f"{self.phases[index]}.pkl"
+        return f"{self.phases[index]}.{self.format}"
 
     def _full_pklfilepath_index(self, index):
         return os.path.join(self.tmpfolder, self._pklfile_index(index))
