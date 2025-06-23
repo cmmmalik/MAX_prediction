@@ -199,11 +199,11 @@ class Species(CoreSpecies):
                                        client=client,
                                        collection_name=collection_name)
 
-    def search_in_asedb(self, asedb: str or dBcore = None):
+    def search_in_asedb(self, asedb: str or dBcore = None, **kwargs):
         if asedb:
             self.asedb = asedb
 
-        rowsdict = self.asedb.get_formulas(formulas=self.formula)
+        rowsdict = self.asedb.get_formulas(formulas=self.formula, **kwargs)
         return rowsdict
 
     def set_rows(self, rowsdict: dict):
