@@ -32,7 +32,7 @@ def calculate_reaction_energy(reactants, products, energies: dict, verbosity: in
     if verbosity >= 2:
         print("energies:{}".format(energies))
 
-    diff = np.sum(product_sum) - np.sum(reactant_sum)
+    diff = do_sum_lst(product_sum) - do_sum_lst(reactant_sum)
 
     if verbosity >= 1:
         print("reactants energy:{}".format(reactant_sum))
