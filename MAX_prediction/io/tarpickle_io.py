@@ -283,8 +283,8 @@ class DataFramePickleTarLogger(PickleTarLoggerCollections):
 
         with open(file, "wb") as ff:
             df_ = self.df[self.df[self.rcolumn] == phase]
-            df_.to_pickle(ff)
-
+            #df_.to_pickle(ff)
+            self._df_to_disk(df=df_,file=ff)
         self._tarmerger.add_pickle_file(file)
 
     def write(self):
