@@ -1378,6 +1378,36 @@ class MXeneAnalyzerbetav1(MXeneReactions, MXeneSidephaseReactions):
         return df
 
 
+class MXeneAnalyzersbetav1Legacy(MXeneAnalyzerbetav1):
+
+    def _get_reaction_energies_mxenes(self, energies_, en_sp, tipe="mxenes"):
+        # todo: either use unique_keys for the dictionaries, or shift to lists. This can still cause bug here.
+        #  better way would be to either generate index or energy along with the reaction balance and from the
+        #  index unique energies from the dataframe can be obtained. The index can be made unique using either
+        #  mpi-id or dataframe index. or simply directly use energy.
+
+        reac = self.outputs[tipe][0]
+        print(reac)
+        if len(reac) == 2 and reac[-1] in ["solver1", "solver2"]:
+            warnings.warn("We have non legacy reactions types...")
+            # we have non legacy resactions...
+            return MXeneAnalyzerbetav1._get_reaction_energies_mxenes(self=self, energies_=energies_, en_sp=en_sp, tipe=tipe)
+
+        for reac in self.outputs[tipe]:
+
+            append_dict1_dict2_exclusive(energies_, en_sp, reac[-1].keys(), exclude=[self.mxene.formula,
+                                                                                     self.tmxene.formula])
+            # exclude both BAre and Terminatec
+      #  reactions, solvers = zip(*self.outputs[tipe])
+        reactions = self.outputs[tipe]
+        if self.verbosity >= 2 :
+            print("debug", reactions)
+
+        rdf = self._calculate_reaction_enthalpies(reactions, energies=energies_, verbosity=self.verbosity)
+        rdf["type"] = "MXene"
+        return rdf
+
+
 class MultiTermMXeneAnalyzerbetav1(MXeneAnalyzerbetav1, MultiTermMXenReactions):
     __clsmxenereac__ = MultiTermMXenReactions
 
