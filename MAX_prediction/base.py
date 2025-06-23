@@ -9,9 +9,9 @@ from MAX_prediction.core.species import Species, CoreSpecie
 from MAX_prediction.elements import Elements
 from MAX_prediction.utils import Genchemicalsystems
 from ase.db.core import Database as dBcore
-from chempy import balance_stoichiometry
+# from chempy import balance_stoichiometry
 from colorama import Fore, Back, init
-from mse.analysis.chemical_equations import equation_balancer_v1, LinearlydependentMatrix
+# from mse.analysis.chemical_equations import equation_balancer_v1, LinearlydependentMatrix
 from mse.composition_utils import MAXcomp, EnhancedComposition as Pycomp
 from mse.ext.materials_project import SmartMPRester
 from pandas import DataFrame, notna, Series, concat
@@ -903,6 +903,11 @@ class MAXAnalyzer(MAXSpecies):
 
     def balancer_inside(self,
                         solvers_check: bool = True):
+        
+        from chempy import balance_stoichiometry
+        from mse.analysis.chemical_equations import equation_balancer_v1, LinearlydependentMatrix
+
+
         feasible = []
         feasible_solver2 = []
         # if not max_df:
