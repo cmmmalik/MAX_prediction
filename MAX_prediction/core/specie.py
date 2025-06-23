@@ -78,6 +78,7 @@ class CoreSpecie:
     @row.setter
     def row(self, row: AtomsRow):
         if isinstance(row, AtomsRow):
+            assert self.composition.reduced_composition == Composition(row.formula).reduced_composition
             self._row = Row(row=row)
         else:
             raise ValueError("Expected an instance of {}, instead got {}".format(AtomsRow, type(row)))
