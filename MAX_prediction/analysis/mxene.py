@@ -1461,14 +1461,15 @@ class MultiTermMXeneAnalyzerbetav1(MXeneAnalyzerbetav1, MultiTermMXenReactions):
 
             if reac:
 
-                append_dict1_dict2_exclusive(energies_, en_sp, reac[-1].keys(), exclude=[self.mxene.formula,
+                append_dict1_dict2_exclusive(energies_, en_sp, reac[0][-1].keys(), exclude=[self.mxene.formula,
                                                                                      *self.tmxenes.formula.tolist()])
 
             # exclude both bare and terminate for mxene reactions, we should exlude, to make sure that,
             # these energies are not overwritten.
-
-        rdf = self._calculate_reaction_enthalpies(self.outputs[tipe], energies=energies_, verbosity=self.verbosity-1)
+        reactions, solvers = zip(*self.outputs[tipe])
+        rdf = self._calculate_reaction_enthalpies(reactions, energies=energies_, verbosity=self.verbosity-1)
         rdf["type"] = "MXene"
+        rdf["solvertype"] = solvers
         return rdf
 
     def get_reaction_energies(self):
