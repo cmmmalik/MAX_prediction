@@ -129,7 +129,7 @@ class Balance:
             if self.verbosity >= 2:
                 print(
                     Fore.RED + "Reactions unbalanced by first solver '{}' are also unbalanced by second solver '{}'".format(
-                        equation_balancer_v3.__name__,
+                        equation_balancer_v2.__name__,
                         balance_stoichiometry.__name__))
 
         return eq1coeffs, eq2coeffs
