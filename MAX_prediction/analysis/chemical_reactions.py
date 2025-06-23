@@ -3,7 +3,7 @@ from itertools import chain as itchain
 from pandas import DataFrame
 from chempy import balance_stoichiometry
 from colorama import Fore
-from mse.analysis.chemical_equations import equation_balancer_v2, LinearlydependentMatrix, equation_balancer_v3
+from mse.analysis.chemical_equations import equation_balancer_v2, LinearlydependentMatrix# equation_balancer_v3
 
 # set the print level fpr numpy array here.
 np.set_printoptions(threshold=10)
