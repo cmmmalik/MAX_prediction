@@ -1,6 +1,6 @@
 import os
 import warnings
-from pandas import DataFrame, concat
+from pandas import DataFrame, concat, read_pickle
 from pathlib import Path
 import pickle
 import shutil
@@ -9,7 +9,7 @@ from tarfile import TarFile
 
 from .tar_io import PickleMergerToTar
 
-from MAX_prediction.analysis.mxene import MXeneAnalyzers_beta, MXenesAnalyzersBase
+from MAX_prediction.analysis.mxenecollections import MXeneAnalyzers_beta, MXenesAnalyzersBase
 
 
 class PickleTarLoggerCollections:
