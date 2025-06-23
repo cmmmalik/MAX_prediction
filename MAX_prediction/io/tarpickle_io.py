@@ -266,6 +266,14 @@ class DataFramePickleTarLogger(PickleTarLoggerCollections):
     def _full_pklfilepath_index(self, index):
         return os.path.join(self.tmpfolder, self._pklfile_index(index))
 
+    def _df_to_disk(self, df, file):
+        if self.format == "csv":
+            df.to_csv(file)
+        elif self.format == "pkl":
+            df.to_pickle(file)
+        else:
+            raise ValueError(f"Unknown format {self.format} provided..")
+
     def write_file_index(self, index):
 
         file = self._full_pklfilepath_index(index=index)
