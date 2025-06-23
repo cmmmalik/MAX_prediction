@@ -78,6 +78,7 @@ class CoreSpecie:
     @row.setter
     def row(self, row: AtomsRow):
         if isinstance(row, AtomsRow):
+            assert self.composition.reduced_composition == Composition(row.formula).reduced_composition
             self._row = Row(row=row)
         else:
             raise ValueError("Expected an instance of {}, instead got {}".format(AtomsRow, type(row)))
@@ -105,7 +106,8 @@ class CoreSpecie:
 
     @property
     def energy_per_formula(self):
-        return self.row.energy_per_formula
+ #       return self.row.energy_per_formula
+        return self.get_energy_formula()
 
     @property
     def energy_per_atom(self):
@@ -125,4 +127,4 @@ class CoreSpecie:
         :return:
         """
         en = self.row.energy_per_atom
-        return en * Composition(self.formula).num_atoms
+        return en * self.composition.num_atoms

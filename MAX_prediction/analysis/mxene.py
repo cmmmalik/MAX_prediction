@@ -8,6 +8,7 @@ from multiprocessing import Pool
 import numpy as np
 from chempy import balance_stoichiometry
 from colorama import Fore, Style, init
+from MAX_prediction.analysis.specifics import MAXSpecies, MXeneSpecies, Sidephases
 from mse.analysis.chemical_equations import equation_balancer_v2
 from pandas import DataFrame, concat, Series
 from pymatgen.core import periodic_table
@@ -88,7 +89,7 @@ class Parallelbalance:
     imap.
     """
 
-    def __init__(self, reactants, solvers_check, verbosity:int=0) -> None:
+    def __init__(self, reactants, solvers_check, verbosity:int=1) -> None:
         self.func = partial(MXeneBase._balance, reactants=reactants, solvers_check=solvers_check, verbosity=verbosity)
         self.verbosity = verbosity
 
@@ -241,10 +242,10 @@ class MXeneBase:
                                                    solvers_check=solvers_check,
                                                    verbosity=verbosity)
             if coeffs:
-                reactions.append(coeffs)
+                reactions.append((coeffs, "solver1"))
 
             elif coeffs_2balance:
-                reactions_2solver.append(coeffs_2balance)
+                reactions_2solver.append((coeffs_2balance, "solver2"))
 
         if mergesolvers:
             warnings.warn("Reactions from both solvers are merged into a single list,", UserWarning)
@@ -266,6 +267,7 @@ class MXeneBase:
                                mergesolvers=True,
                                poolmap:str="imap",
                                **kwargs):
+        
         silence = kwargs.pop("silence", True)
         print(Fore.RED + "Parallel processing over: {}".format(nproc))
         if silence:
@@ -288,12 +290,11 @@ class MXeneBase:
                                desc="Processing"):
 
                     if result[0]:
-                        reactions.append(result[0])
+                        reactions.append((result[0], "solver1"))
                     elif result[-1]:
-                        reactions2_solver.append(result[-1])
+                        reactions2_solver.append((result[-1], "solver2"))
 
             # reactions, reactions2_solver = list(parallelmp(func=funcobj.actualfunc, iterable=productiter, **kwargs))
-
         # assert len(reactions) == len(reactions2_solver)
 
         if mergesolvers:
@@ -315,7 +316,7 @@ class MXeneBase:
         print("Total number of balanced: {}".format(len(reactions)))
 
         return reactions
-
+       
 
 class MXeneReactions(MXeneBase):
 
@@ -384,8 +385,7 @@ class MXeneReactions(MXeneBase):
         reactants = self._reactants_
         mxene = getattr(self, tipe)
         maxmapp = mxene.max.elementsmap
-        warnings.warn(
-            "Considering only a reaction in which MXene+A-F+H2 is formed")
+        warnings.warn("Considering only a reaction in which MXene+A-F+H2 is formed")
         els_sol = self.solution.unique_elements()
         warnings.warn("Expects 'H-Halogen' type etchant")
         assert "H" in els_sol and any([periodic_table.Element(i).is_halogen for i in els_sol])
@@ -400,6 +400,8 @@ class MXeneReactions(MXeneBase):
             print("Species:\n{}".format(species))
 
         iterlst = generate_products(species)
+        reactions = [] # output from solver 1
+        reactions_2solver = [] # output from solver 2
 
         if not self.nproc:
             reactions, reactions_2solver = self._serialiter_balance_(productiter=iterlst,
@@ -432,8 +434,12 @@ class MXeneReactions(MXeneBase):
                                                         chunksize=len(species))
 
         if return_df:
-            return reactions, DataFrame(reactions, columns=["reactants", "products"])
-        return reactions
+            if reactions_2solver:
+                return reactions, DataFrame(reactions, columns=["reactants", "products"]), reactions_2solver, DataFrame(reactions_2solver, columns=["reactants", "products"])
+            else:
+                return reactions, DataFrame(reactions, columns=["reactants", "products"])
+        
+        return reactions, reactions_2solver
 
     def get_mxene_reaction_enumerate(self,
                                      tipe="mxene",
@@ -459,12 +465,13 @@ class MXeneReactions(MXeneBase):
                                                                     desc="Processing"):
                 yield i, [mxene.formula] + list(product)
 
-        reactants = [self.max.formula] + self.solution.formula.tolist()
+        # reactants = [self.max.formula] + self.solution.formula.tolist()
+        reactants = self._reactants_
         maxsize, els = self.get_number_allowed_products()
-        sizelimits = list(range(1, maxsize + 1))
+        sizelimits = list(range(1, maxsize))
 
-        reactions = []
-        reactions_2solver = []
+        reactions = [] # output from solver 1
+        reactions_2solver = [] # output from solver 2
         sphase = self.competing_phases.df.phase
 
         print("No. of phases originally= {}".format(len(sphase)))
@@ -473,7 +480,7 @@ class MXeneReactions(MXeneBase):
         print("No. of phases after (removing MXene and T-MXene compositions): {}".format(len(sphase)))
 
         mxene = getattr(self, tipe)
-        mxene_els = self.mxene.elements.unique_elements()  # unterminated Elements
+        mxene_els = self.mxene.Elements.unique_elements()  # unterminated Elements
 
         if not allow_all:
             pseduels = [i for i in els if i not in mxene_els]
@@ -483,29 +490,40 @@ class MXeneReactions(MXeneBase):
         gen_iterproducts = generate_products()
 
         if not self.nproc:
-            for i, products in gen_iterproducts:
 
-                if self.verbosity >= 2:
-                    print("product from enumeration: {}".format(products))
-
-                coeffs, coeffs_2balanc = self._balance(reactants=reactants,
-                                                       products=products,
-                                                       i=i,
-                                                       solvers_check=True)  # the two lists will be mutually exclusive.
-                if coeffs:
-                    reactions.append(coeffs)
-                elif coeffs_2balanc:
-                    reactions_2solver.append(coeffs_2balanc)
+            reactions, reactions_2solver = self._serialiter_balance_(productiter=gen_iterproducts,
+                                                                     reactants=reactants,
+                                                                     solvers_check=True,
+                                                                     verbosity=self.verbosity)
+            # for i, products in gen_iterproducts:
+            #
+            #     if self.verbosity >= 2:
+            #         print("product from enumeration: {}".format(products))
+            #
+            #     coeffs, coeffs_2balanc = self._balance(reactants=reactants,
+            #                                            products=products,
+            #                                            i=i,
+            #                                            solvers_check=True)  # the two lists will be mutually exclusive.
+            #     if coeffs:
+            #         reactions.append(coeffs)
+            #     elif coeffs_2balanc:
+            #         reactions_2solver.append(coeffs_2balanc)
 
         else:
-            func = partial(self._balance, reactants=reactants, solvers_check=True)
-
-            with Pool(self.nproc) as mp:
-                reactions, reactions_2solver = list(mp.imap(func=func, iterable=gen_iterproducts))
-
-            assert len(reactions) == len(reactions_2solver)
-            warnings.warn("Reactions from both solvers are merged...", UserWarning)
-            reactions = list(filter(lambda x: x[0] if x[0] else x[1], zip(reactions, reactions_2solver)))
+            # func = partial(self._balance, reactants=reactants, solvers_check=True)
+            #
+            # with Pool(self.nproc) as mp:
+            #     reactions, reactions_2solver = list(mp.imap(func=func, iterable=gen_iterproducts))
+            #
+            # assert len(reactions) == len(reactions_2solver)
+            # warnings.warn("Reactions from both solvers are merged...", UserWarning)
+            # reactions = list(filter(lambda x: x[0] if x[0] else x[1], zip(reactions, reactions_2solver)))
+            #
+            reactions = self._paralleliter_balance_(productiter=gen_iterproducts,
+                                                    reactants=reactants,
+                                                    solvers_check=True,
+                                                    nproc=self.nproc,
+                                                    chunksize=None)
 
         if return_df:
             if reactions_2solver:
@@ -516,7 +534,11 @@ class MXeneReactions(MXeneBase):
 
     def get_reactions(self, return_df=False):
         for key, tipe in zip(["mxenes", "Tmxenes"], ["mxene", "tmxene"]):
-            self.outputs[key] = self.get_mxene_reactions(tipe=tipe, return_df=return_df)
+            reactions1,  reaction2solver = self.get_mxene_reactions(tipe=tipe, return_df=False)
+            if reaction2solver:
+                reactions1 += reaction2solver
+            
+            self.outputs[key] = reactions1
 
     def get_reactions_enumerate(self):
         for key, tipe in zip(["mxenes", "Tmxenes"], ["mxene", "tmxene"]):
@@ -675,6 +697,8 @@ class MultiTermMXenReactions(MXeneReactions):
 
         sphase = concat([sphase, Series(np.append(self.mxene.formula, [self.tmxenes.formula]), name="phase")],
                         axis=0, ignore_index=True)
+        #drop duplicates
+        sphase = sphase[sphase != mxene.formula]
         print("No. of phases after (adding MXene and T-MXene compositions): {}".format(len(sphase)))
 
         print("sphases are:\n{}".format(sphase))
@@ -1291,21 +1315,32 @@ class MXeneAnalyzerbetav1(MXeneReactions, MXeneSidephaseReactions):
         #  mpi-id or dataframe index. or simply directly use energy.
 
         for reac in self.outputs[tipe]:
-            append_dict1_dict2_exclusive(energies_, en_sp, reac[-1].keys(), exclude=[self.mxene.formula,
+            append_dict1_dict2_exclusive(energies_, en_sp, reac[0][-1].keys(), exclude=[self.mxene.formula,
                                                                                      self.tmxene.formula])
             # exclude both BAre and Terminatec
-        rdf = self._calculate_reaction_enthalpies(self.outputs[tipe], energies=energies_, verbosity=self.verbosity)
+        reactions, solvers = zip(*self.outputs[tipe])
+        print("debug", reactions)
+
+        rdf = self._calculate_reaction_enthalpies(reactions, energies=energies_, verbosity=self.verbosity)
         rdf["type"] = "MXene"
+        rdf["solvertype"] = solvers
         return rdf
 
     def _get_sidephase_energies_(self, energies_reac, energies_sp, tipes: list):
         energies_ = copy_append_dict(energies_reac, energies_sp)
         df = DataFrame()
         for tipe in tipes:
-            rdf = self._calculate_reaction_enthalpies(reactions=self.outputs[tipe],
+            
+            if not self.outputs[tipe]:
+                continue
+
+            reactions, solvers = zip(*self.outputs[tipe])
+            rdf = self._calculate_reaction_enthalpies(reactions=reactions,
                                                       energies=energies_,
                                                       verbosity=self.verbosity-1)
+            rdf["solvertype"] = solvers
             df = concat([df, rdf], axis=0, ignore_index=True)
+        df["type"] = "sp"
         return df
 
     def get_reaction_energies(self):
@@ -1341,6 +1376,36 @@ class MXeneAnalyzerbetav1(MXeneReactions, MXeneSidephaseReactions):
         df = concat([df, self._get_sidephase_energies_(energies_reac, en_sp, tipes=keys)], axis=0, ignore_index=True)
 
         return df
+
+
+class MXeneAnalyzersbetav1Legacy(MXeneAnalyzerbetav1):
+
+    def _get_reaction_energies_mxenes(self, energies_, en_sp, tipe="mxenes"):
+        # todo: either use unique_keys for the dictionaries, or shift to lists. This can still cause bug here.
+        #  better way would be to either generate index or energy along with the reaction balance and from the
+        #  index unique energies from the dataframe can be obtained. The index can be made unique using either
+        #  mpi-id or dataframe index. or simply directly use energy.
+
+        reac = self.outputs[tipe][0]
+        print(reac)
+        if len(reac) == 2 and reac[-1] in ["solver1", "solver2"]:
+            warnings.warn("We have non legacy reactions types...")
+            # we have non legacy resactions...
+            return MXeneAnalyzerbetav1._get_reaction_energies_mxenes(self=self, energies_=energies_, en_sp=en_sp, tipe=tipe)
+
+        for reac in self.outputs[tipe]:
+
+            append_dict1_dict2_exclusive(energies_, en_sp, reac[-1].keys(), exclude=[self.mxene.formula,
+                                                                                     self.tmxene.formula])
+            # exclude both BAre and Terminatec
+      #  reactions, solvers = zip(*self.outputs[tipe])
+        reactions = self.outputs[tipe]
+        if self.verbosity >= 2 :
+            print("debug", reactions)
+
+        rdf = self._calculate_reaction_enthalpies(reactions, energies=energies_, verbosity=self.verbosity)
+        rdf["type"] = "MXene"
+        return rdf
 
 
 class MultiTermMXeneAnalyzerbetav1(MXeneAnalyzerbetav1, MultiTermMXenReactions):
@@ -1396,14 +1461,15 @@ class MultiTermMXeneAnalyzerbetav1(MXeneAnalyzerbetav1, MultiTermMXenReactions):
 
             if reac:
 
-                append_dict1_dict2_exclusive(energies_, en_sp, reac[-1].keys(), exclude=[self.mxene.formula,
+                append_dict1_dict2_exclusive(energies_, en_sp, reac[0][-1].keys(), exclude=[self.mxene.formula,
                                                                                      *self.tmxenes.formula.tolist()])
 
             # exclude both bare and terminate for mxene reactions, we should exlude, to make sure that,
             # these energies are not overwritten.
-
-        rdf = self._calculate_reaction_enthalpies(self.outputs[tipe], energies=energies_, verbosity=self.verbosity-1)
+        reactions, solvers = zip(*self.outputs[tipe])
+        rdf = self._calculate_reaction_enthalpies(reactions, energies=energies_, verbosity=self.verbosity-1)
         rdf["type"] = "MXene"
+        rdf["solvertype"] = solvers
         return rdf
 
     def get_reaction_energies(self):
@@ -1438,537 +1504,3 @@ class MultiTermMXeneAnalyzerbetav1(MXeneAnalyzerbetav1, MultiTermMXenReactions):
         df = concat([df, self._get_sidephase_energies_(energies_reac, en_sp, tipes=keys)], axis=0, ignore_index=True)
 
         return df
-
-
-
-class MXenesAnalyzers:
-    warnings.warn("No longer in use", DeprecationWarning, stacklevel=2)
-
-    def __init__(self,
-                 mxenecomps: MXeneSpecies,
-                 Tmxenecomps: MXeneSpecies,
-                 maxphases: MAXSpecies,
-                 sidephases: Sidephases,
-                 solution: Species,
-                 verbosity=1):
-        self.mxenes = mxenecomps
-        self.Tmxenes = Tmxenecomps
-        self.sidephases = sidephases
-        self.solution = solution
-        self.maxphases = maxphases
-        self.analyzers = None
-        self.verbosity = verbosity
-
-    def setup(self):
-        analyzers = [MXeneAnalyzer(mxene=mxco,
-                                   competing_phases=Sidephases([]),
-                                   solution=self.solution,
-                                   molenergies={},
-                                   verbosity=self.verbosity) for mxco in self.mxenes]
-
-        self.analyzers = analyzers
-
-    def get_reaction_index(self, index):
-
-        lyzer = self.analyzers[index]
-        chsys = lyzer.get_chemical_systems()
-        sp_df = self.sidephases.get_side_phases_chemsys(chsys)  # get the side phases of a mxene.
-        lyzer.competing_phases = Sidephases.from_df(sp_df)
-        self.get_mxene_reactions(index=index)
-        self.get_side_reactions(index=index)
-
-    def get_mxene_reactions(self, index):
-        lyzer = self.analyzers[index]
-        mxene_reactions = lyzer.get_mxene_reaction(return_df=False)  # bare mxene reactions
-        assert lyzer.mxene.max.formula == self.Tmxenes[index].max.formula
-        lyzer.mxene = self.Tmxenes[index]
-        Tmxene_reactions = lyzer.get_mxene_reaction(return_df=False)  # F terminated MXene reactions
-        lyzer.mxene = self.mxenes[index]
-        lyzer.outputs["mxenes"] = mxene_reactions
-        lyzer.outputs["Tmxenes"] = Tmxene_reactions
-
-    def get_side_reactions(self, index):
-        lyzer = self.analyzers[index]
-        assert lyzer.competing_phases is not None
-        sidereactions, side2reactions = lyzer.get_side_reactions(solvers_check=True)
-        lyzer.outputs["sidereactions"] = sidereactions
-        lyzer.outputs["side2reactions"] = side2reactions
-
-    def _energies_index(self, index):
-
-        lyzer = self.analyzers[index]
-        mxene = lyzer.mxene
-        tmxene = self.Tmxenes[index]
-        maxphase = self.maxphases[index]
-
-        assert maxphase.formula == mxene.max.formula and maxphase.formula == tmxene.max.formula
-
-        max_en = {maxphase.formula: maxphase.energy_per_formula, }
-        tmxene_en = {tmxene.formula: tmxene.energy_per_formula, }
-
-        energies = lyzer._energies_()
-        assert all([i not in energies for i in ["tmxene", "etchant"]])
-        energies["max"] = max_en
-        energies["tmxene"] = tmxene_en
-
-        return energies
-
-    def get_reaction_energies_index(self,
-                                    index,
-                                    etchantenergies: dict,
-                                    ):
-
-        lyzer = self.analyzers[index]
-        df = DataFrame()
-        mxene = lyzer.mxene
-        tmxene = self.Tmxenes[index]
-        maxphase = self.maxphases[index]
-        cp_df = lyzer.competing_phases.df
-
-        assert maxphase.formula == mxene.max.formula and maxphase.formula == tmxene.max.formula
-
-        max_en = {maxphase.formula: maxphase.energy_per_formula, }
-        mxene_en = {mxene.formula: mxene.energy_per_formula, }
-        tmxene_en = {tmxene.formula: tmxene.energy_per_formula, }
-
-        energies_sp = dict(zip(cp_df["phase"], cp_df["total_energy_per_formula"]))
-        energies_reac = copy_append_dict(max_en, etchantenergies)
-
-        # for k in itchain(etchantenergies, mxene_en, tmxene_en, max_en):
-        #     if k not in energies:
-        #         print(f"{k} energy is not present in the energy dictionary")
-        #         raise AssertionError
-
-        outputs = lyzer.outputs
-        print("MAX phase is: {}".format(maxphase.formula))
-        for key in outputs.keys():
-            if key == "mxenes":
-                energies_ = copy_append_dict(energies_reac, mxene_en)  # adding mxene energy
-                # debugging....
-                print("Reactant + MXene energies: {}".format(energies_))
-                # add other products now...
-                for reac in outputs[key]:
-                    for pr in reac[-1]:
-                        if pr == mxene.formula or pr in energies_:
-                            continue
-                        energies_[pr] = energies_sp[pr]
-
-                rdf = lyzer.calculate_reaction_enthalpies(outputs[key], energies=energies_)
-                rdf["type"] = "MXene"
-            elif key == "Tmxenes":
-                energies_ = copy_append_dict(energies_reac, tmxene_en)
-                for reac in outputs[key]:
-                    for pr in reac[-1]:
-                        if pr == tmxene.formula or pr in energies_:
-                            continue
-                        energies_[pr] = energies_sp[pr]
-
-                rdf = lyzer.calculate_reaction_enthalpies(outputs[key], energies=energies_)
-                rdf["type"] = "MXene"
-            elif key in ["sidereactions", "side2reactions"]:
-                energies_ = copy_append_dict(energies_reac, energies_sp)
-                rdf = lyzer.calculate_reaction_enthalpies(outputs[key], energies=energies_)
-                rdf["type"] = "sp"
-
-            df = concat([df, rdf], axis=0, ignore_index=True)
-        return df
-
-    def get_reactions(self, picklef=True):
-        Log = None
-        if picklef:
-            pklfile = "cache_reaction.pkl"
-            if os.path.exists(picklef):
-                self._read_pickle_(picklef=pklfile)
-                Log = open(pklfile, "ab")
-            else:
-                Log = open(pklfile, "wb")
-        for i in range(len(self.analyzers)):
-            lyzer = self.analyzers[i]
-            if lyzer.outputs:
-                chsys = lyzer.get_chemical_systems()
-                sp_df = self.sidephases.get_side_phases_chemsys(chsys)  # get the side phases of a mxene.
-                lyzer.competing_phases = Sidephases.from_df(sp_df)
-                continue
-            try:
-                self.get_reaction_index(index=i)
-                if picklef:
-                    pickle.dump({lyzer.mxene.formula: lyzer.outputs}, Log, protocol=pickle.HIGHEST_PROTOCOL)
-            except Exception as ex:
-                if Log:
-                    Log.close()
-                raise ex
-
-        if Log:
-            Log.close()
-
-    def _read_pickle_(self, picklef="cache_reaction.pkl"):
-        # read and set here..
-        with open(picklef, "rb") as ff:
-            while True:
-                try:
-                    reactions = pickle.load(ff)
-                    for rect in reactions.values():
-                        break
-                    maxphase = list(rect["mxenes"][0][0].keys())[0]
-                    MAXSpecie(maxphase)
-                    if self.verbosity >= 1:
-                        print("MAX phase from the pickled file:{}".format(maxphase))
-                    try:
-                        index = self.maxphases.find_index_name(name=maxphase)
-                    except KeyError:
-                        warnings.warn(
-                            "It seems the MAX phase: {} is not being analyzed\n (ignore if this is the case)".format(
-                                maxphase), UserWarning)
-                        continue
-                    assert len(index) == 1
-                    index = index[0]
-                    lyzer = self.analyzers[index]
-                    lyzer.outputs = rect
-
-                except (pickle.UnpicklingError, EOFError):
-                    break
-
-    def get_reaction_energies(self, etchantenergies: dict):
-        DF = DataFrame()
-        for i in range(len(self.analyzers)):
-            df = self.get_reaction_energies_index(index=i, etchantenergies=etchantenergies)
-            DF = concat([DF, df], axis=0, ignore_index=True)
-        DF = open_uprectants(DF)
-        return DF
-
-    def todict(self):
-        raise NotImplementedError("Not implemented yet")
-
-    def get_total_energies_index(self, index: int):
-        """returns energies(total dft energies) of a given indexed mxene and its related species,
-
-        Args:
-            index (int): _description_
-
-        Returns:
-            _type_: dict, contains energies of max, mxene, terminated mxene, and side phases
-        """
-
-        lyzer = self.analyzers[index]
-        mxene = lyzer.mxene
-        tmxene = self.Tmxenes[index]
-        maxphase = self.maxphases[index]
-        cp_df = lyzer.competing_phases.df
-
-        assert maxphase.formula == mxene.max.formula and maxphase.formula == tmxene.max.formula
-
-        max_en = {maxphase.formula: maxphase.energy_per_formula, }
-        mxene_en = {mxene.formula: mxene.energy_per_formula, }
-        tmxene_en = {tmxene.formula: tmxene.energy_per_formula, }
-
-        energies_sp = dict(zip(cp_df["phase"], cp_df["total_energy_per_formula"]))
-        return {"max": max_en, "mxene": mxene_en, "tmxene": tmxene_en, "sidephases": energies_sp}
-
-    def run_energy_tests(self, df: DataFrame):
-
-        assert "energies" in df.columns
-        for i in range(len(self.analyzers)):
-            tenergies = self.get_total_energies_index(index=i)
-            self.run_MXenes_test(df=df.loc[df["type"] == "MXene"],
-                                 index=i,
-                                 mxenergies=copy_append_multiple_dicts(tenergies["mxene"], tenergies["tmxene"],
-                                                                       tenergies["max"], ))
-
-            self.run_sp_test(df.loc[df["type"] == "sp"], spenergies=tenergies["sidephases"], index=i)
-
-    def run_MXenes_test(self, df: DataFrame, index, mxenergies):
-        maxf = self.maxphases[index].formula
-        df_ = df.loc[df["reactant_0"] == maxf]
-        assert_energies(df_, energies=mxenergies)
-
-    def run_sp_test(self, df: DataFrame, index, spenergies):
-        from explicit_calculation_sp import assert_energies
-        maxf = self.maxphases[index].formula
-        df_ = df.loc[df["reactant_0"] == maxf]
-        assert_energies(df_, energies=spenergies)
-
-
-class MXenesAnalyzersBase:
-    output_keys = ['mxenes', 'Tmxenes', 'sidereactions', 'side2reactions']
-
-    def __init__(self,
-                 mxenecomps: MXeneSpecies,
-                 Tmxenecomps: MXeneSpecies,
-                 maxphases: MAXSpecies,
-                 sidephases: Sidephases,
-                 solution: Species,
-                 etchant_energies: dict = {},
-                 verbosity: int = 1,
-                 nproc=None):
-        """
-        Class to be used for a collective analysis of many MAX/MXenes systems. Up-to-date and should be used for
-        the analysis.
-
-        :param mxenecomps:
-        :param Tmxenecomps:
-        :param maxphases:
-        :param sidephases:
-        :param solution:
-        :param etchant_energies:
-        :param verbosity:
-        """
-
-        self.__inner_initialize(mxenecomps=mxenecomps,
-                                Tmxenecomps=Tmxenecomps,
-                                maxphases=maxphases,
-                                sidephases=sidephases,
-                                solution=solution,
-                                etchant_energies=etchant_energies,
-                                verbosity=verbosity)
-        self._setup_(mxenes=mxenecomps, Tmxenes=Tmxenecomps, maxes=maxphases, nproc=nproc)
-
-    def __inner_initialize(self, mxenecomps, Tmxenecomps, maxphases, sidephases, solution, etchant_energies, verbosity):
-
-        self.verbosity = verbosity
-        self._logger = None
-
-        assert isinstance(maxphases, MAXSpecies)
-
-        assert isinstance(solution, Species)
-        self.solution = solution
-
-        assert isinstance(sidephases, Sidephases)
-        self.sidephases = sidephases
-
-        assert isinstance(mxenecomps, MXeneSpecies)
-        assert isinstance(Tmxenecomps, MXeneSpecies)
-
-        assert isinstance(etchant_energies, dict)
-        self.etchant_energies = etchant_energies  # it should be part of the solution
-        # outputs analyzers.
-        self.analyzers = []
-
-    def __len__(self):
-        return len(self.analyzers)
-
-    def __getitem__(self, item):
-        return self.analyzers[item]
-
-    @property
-    def logger(self):
-        return self._logger
-
-    @logger.setter
-    def logger(self, value):
-        from MAX_prediction.io.tarpickle_io import PickleTarLoggerCollections
-        assert isinstance(value, PickleTarLoggerCollections)  # either remove this check or import the class here,
-        self._logger = value
-
-    def set_side_phasesdf_index(self, index):
-        lyzer = self.analyzers[index]
-
-        if lyzer.competing_phases and len(lyzer.competing_phases.formula) != 0:
-            warnings.warn("The competing phases are already existing.. (Will ignore the over-write)")
-            return
-        chsys = lyzer.get_chemical_systems()
-        sp_df = self.sidephases.get_side_phases_chemsys(chsys)  # get the side phases of a mxene
-
-        lyzer.competing_phases = Sidephases.from_df(sp_df)
-        if self.verbosity >= 2:
-            print("Competing phaes of: {}".format(lyzer.mxene.formula))
-            print("MAX: {}".format(lyzer.max.formula))
-            print("Competing phases:\n{}".format(lyzer.competing_phases))
-
-    def _setup_(self, mxenes, Tmxenes, maxes, nproc=None, ):
-        assert len(mxenes) == len(Tmxenes) == len(maxes)  # Todo: This does not work if this assertion is not satisfied
-        # for example, if we have different number of functionalized MXenes than baremxenes because we are considering
-        # more than one type of termiantion at the surface..
-
-        analyzers = [MXeneAnalyzerbetav1(mxene=mxco,
-                                         competing_phases=Sidephases([]),
-                                         solution=self.solution,
-                                         molenergies={},
-                                         tmxene=tmxco,
-                                         parentmax=maxp,
-                                         etchant_energies=self.etchant_energies,
-                                         verbosity=self.verbosity,
-                                         nproc=nproc) for mxco, tmxco, maxp in
-                     zip(mxenes, Tmxenes, maxes)]
-
-        self.analyzers = analyzers
-
-    def get_reactions_index(self, index, mxeneenumerate=True, solvers_check=True):
-        """
-        For the details about the arguments, see the documentation of MXeneAnalyzerbetav1.get_all_reactions.
-        :param index:
-        :param mxeneenumerat:
-        :param solvers_check:
-        :return:
-        """
-
-        self.set_side_phasesdf_index(index=index)
-        lyzer = self.analyzers[index]
-        lyzer.get_all_reactions(mxenenumerate=mxeneenumerate, solvers_check=solvers_check)
-
-    def get_reactions(self):
-
-        logger = self.logger
-        for i in range(len(self.analyzers)):
-
-            if logger:  # reading from the logger
-                logger.check_read_data_index(index=i)
-
-            lyzer = self.analyzers[i]
-
-            if not lyzer.outputs:
-                self.get_reactions_index(index=i)
-                if logger:
-                    logger.write_index_(index=i, whether_energies=True, etchantenergies=None)
-
-        if logger:
-            logger.merge()
-
-    def get_reaction_energies_index(self, index):
-        lyzer = self.analyzers[index]
-        return lyzer.get_reaction_energies()
-
-    def get_total_energies_index(self, index):
-        lyzer = self.analyzers[index]
-        return lyzer._energies_()
-
-    def get_reaction_energies(self):
-        DF = DataFrame()
-        for i in range(len(self.analyzers)):
-            df = self.get_reaction_energies_index(index=i)
-            DF = concat([DF, df], axis=0,
-                        ignore_index=True)  # todo: Add option to log the calculated energies as well...
-        DF = open_uprectants(DF)
-        return DF
-
-
-class MultiTermMXeneAnalyzersBase(MXenesAnalyzersBase):
-    def __init__(self,
-                 mxenecomps: MXeneSpecies,
-                 Tmxenecomps: MXeneSpecies,
-                 maxphases: MAXSpecies,
-                 sidephases: Sidephases,
-                 solution: Species,
-                 termination: list or tuple,
-                 etchant_energies: dict = {},
-                 verbosity: int = 1,
-                 nproc: object = None) -> object:
-        assert isinstance(termination, (list, tuple))
-        self.termination = termination
-
-        MXenesAnalyzersBase.__init__(self=self,
-                                     mxenecomps=mxenecomps,
-                                     Tmxenecomps=Tmxenecomps,
-                                     maxphases=maxphases,
-                                     sidephases=sidephases,
-                                     solution=solution,
-                                     etchant_energies=etchant_energies,
-                                     verbosity=verbosity,
-                                     nproc=nproc)
-
-    # def __inner_initialize(self,
-    #                        mxenecomps,
-    #                        Tmxenecomps,
-    #                        maxphases,
-    #                        sidephases,
-    #                        solution,
-    #                        etchant_energies,
-    #                        verbosity):
-    #
-    #     self.verbosity = verbosity
-    #     self._logger = None
-    #
-    #     assert isinstance(maxphases, MAXSpecies)
-    #
-    #     assert isinstance(solution, Species)
-    #     self.solution = solution
-    #
-    #     assert isinstance(sidephases, Sidephases)
-    #     self.sidephases = sidephases
-    #
-    #     assert isinstance(mxenecomps, MXeneSpecies)
-    #     assert isinstance(Tmxenecomps, dict)
-    #     assert all([isinstance(Tmxenecomps[k], MXeneSpecies) for k in self.termination])
-    #
-    #     assert isinstance(etchant_energies, dict)
-    #     self.etchant_energies = etchant_energies  # it should be part of the solution
-    #
-
-    def _setup_(self, mxenes, Tmxenes, maxes, nproc=None, ):
-        assert len(mxenes) == len(maxes)
-        # get all the MXenes which have same MAX phase..
-
-        analyzers = []
-        for mxco, maxp in zip(mxenes, maxes):
-            assert mxco.max == maxp
-
-            # collect the T-terminated MXenes which have same MAX.
-            tmxenes = Tmxenes.select_maxph(maxformula=maxp.formula)
-            print("mxene:", mxco)
-            print("tmxenes:", tmxenes)
-            lyzer = MultiTermMXeneAnalyzerbetav1(mxene=mxco,
-                                                 competing_phases=Sidephases([]),  # this is set on the fly.
-                                                 solution=self.solution,
-                                                 molenergies={},
-                                                 tmxenes=tmxenes,
-                                                 parentmax=maxp,
-                                                 etchant_energies=self.etchant_energies,
-                                                 verbosity=self.verbosity,
-                                                 nproc=nproc)
-
-            analyzers.append(lyzer)
-
-        self.analyzers = analyzers
-
-
-class MXeneAnalyzers_beta(MXenesAnalyzersBase):
-    """
-    This class was designed to handle MXene enumeration only. The methods allow for the case of only enumerating MXene
-    reactions without enumeration over possible side reactions.
-    """
-
-    # output_keys = ['mxenes', 'Tmxenes', 'sidereactions', 'side2reactions']
-
-    def set_side_phasesdf(self):
-        for index in range(len(self.analyzers)):
-            self.set_side_phasesdf_index(index=index)
-
-    def get_mxene_reactions_enumerate_index(self, index):
-
-        self.set_side_phasesdf_index(index=index)
-        lyzer = self.analyzers[index]
-
-        ## old implementation.... #####################################
-        # mxene_reactions, mxene_reactions2 =  lyzer.get_mxene_reaction_enumerate(return_df=False)
-        # if mxene_reactions2:
-        # mxene_reactions += mxene_reactions2
-
-        # assert lyzer.mxene.max.formula == self.Tmxenes[index].max.formula
-        # Tmxene_reactions, Tmxene_reactions2 = lyzer.get_mxene_reaction_enumerate(return_df=False)
-        # if Tmxene_reactions2: # as a hack, am append the reactions from both solvers into one.... (may contain duplicates)
-        #     Tmxene_reactions += Tmxene_reactions2
-
-        # # lyzer.mxene = self.mxenes[index]
-        # lyzer.outputs["mxenes"] = mxene_reactions
-        # lyzer.outputs["Tmxenes"] = Tmxene_reactions
-
-        #####################################
-
-        logger = self.logger
-        if logger:
-            logger.check_read_data_index(index=index)
-
-        if not lyzer.outputs:
-            MXeneReactions.get_reactions_enumerate(self=lyzer)
-            logger.mode = "w"  # go into writing mode
-            logger.write_index_(index=index, whether_energies=True, etchantenergies=None)
-
-    def get_mxene_reactions_enumerate(self):
-        for index in range(len(self.analyzers)):
-            self.get_mxene_reactions_enumerate_index(index=index)
-
-        if self.logger:
-            try:
-                self.logger.merge()
-
-            except Exception as ex:
-                print(f"Encountered Exception:\n{ex}")

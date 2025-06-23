@@ -3,7 +3,7 @@ from itertools import chain as itchain
 from pandas import DataFrame
 from chempy import balance_stoichiometry
 from colorama import Fore
-from mse.analysis.chemical_equations import equation_balancer_v2, LinearlydependentMatrix, equation_balancer_v3
+from mse.analysis.chemical_equations import equation_balancer_v2, LinearlydependentMatrix# equation_balancer_v3
 
 # set the print level fpr numpy array here.
 np.set_printoptions(threshold=10)
@@ -13,6 +13,12 @@ def calculate_reaction_energy(reactants, products, energies: dict, verbosity: in
         for sp, co in coeffs.items():
             ssumlst.append(co * energies[sp])
         return ssumlst
+
+    def do_sum_lst(lst):
+        outs = 0
+        for i in lst:
+            outs +=i
+        return outs
 
     assert all([i in energies for i in itchain(reactants.keys(), products.keys())])
     reactant_sum = _get_sum(coeffs=reactants, energies=energies)
@@ -26,7 +32,7 @@ def calculate_reaction_energy(reactants, products, energies: dict, verbosity: in
     if verbosity >= 2:
         print("energies:{}".format(energies))
 
-    diff = np.sum(product_sum) - np.sum(reactant_sum)
+    diff = do_sum_lst(product_sum) - do_sum_lst(reactant_sum)
 
     if verbosity >= 1:
         print("reactants energy:{}".format(reactant_sum))
@@ -36,7 +42,7 @@ def calculate_reaction_energy(reactants, products, energies: dict, verbosity: in
 
     return np.around(diff, decimtol)
 
-
+# to do we need constructor for this
 class Balance:
 
     def __init__(self, reactants, products, verbosity:int=1, allow_reactant0:list=None):
@@ -47,7 +53,15 @@ class Balance:
         if allow_reactant0:
             self._allowzero = allow_reactant0
 
+    def check_duplicates(self):
+        return len(self.products) != len(set(self.products)) or len(self.reactants) != len(set(self.reactants))
+
+
     def balance(self, solvers_check=True,):
+        if self.check_duplicates():
+            print("We have duplicates in the reactants or products")
+            return None, None
+
         reactants = self.reactants
         product = self.products
 
@@ -58,10 +72,11 @@ class Balance:
             print("trying to balance")
             print(f"{'+'.join(reactants)} -------> {'+ '.join(product)}")
         try:
-            _, coeffs = equation_balancer_v3(reactants=reactants,
+            _, coeffs = equation_balancer_v2(reactants=reactants,
                                              products=product,
                                              verbosity=0,
-                                             allowed_zeros=self._allowzero)
+                                            )
+                                             #allowed_zeros=self._allowzero)
 
 
             product_out = coeffs[-1]
@@ -114,7 +129,7 @@ class Balance:
             if self.verbosity >= 2:
                 print(
                     Fore.RED + "Reactions unbalanced by first solver '{}' are also unbalanced by second solver '{}'".format(
-                        equation_balancer_v3.__name__,
+                        equation_balancer_v2.__name__,
                         balance_stoichiometry.__name__))
 
         return eq1coeffs, eq2coeffs

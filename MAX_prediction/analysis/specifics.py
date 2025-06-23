@@ -28,6 +28,8 @@ def get_elements_chemical_systems(chemical_systems: list):
 
 
 class MXeneSpecie(CoreSpecie):
+    
+    __mxenefunc = MXene
 
     def __init__(self, formula: str, parentmax=None, termination: str = None, verbosity: int = 1):
         super(MXeneSpecie, self).__init__(formula=formula)
@@ -61,12 +63,16 @@ class MXeneSpecie(CoreSpecie):
         if not isinstance(value, str):
             raise TypeError(f"Expected an instance of {str}, but got {type(value)}")
         self._formula = value
-        self._composition = MXene(value)
+        self._composition = self.__class__.__mxenefunc(value)
         self._elements = Elements.from_formula(formula=value)
         assert sorted(self._elements.unique_els()) == sorted(self.composition.comp.get_el_amt_dict().keys())
 
     @property
     def elements(self):
+        return self._elements.els
+
+    @property
+    def Elements(self):
         return self._elements
 
     @property
@@ -116,13 +122,13 @@ class MXeneSpecies(MAXSpecies):
 
     @formula.setter
     def formula(self, value):
-        if all([isinstance(v, MXeneSpecie) for v in value]):
+        if all([isinstance(v, self.__class__.coresp) for v in value]):
             formula = [v.formula for v in value]
             self._composition = value
             self._formula = np.asarray(formula)
 
         else:
-            self._composition = [MXeneSpecie(i) for i in value]
+            self._composition = [self.__class__.coresp(i) for i in value]
             self._formula = np.asarray(value)
         # maxformulas = self.get_maxformula()
         # MAXSpecies(maxformulas)

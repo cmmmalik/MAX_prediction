@@ -1,6 +1,6 @@
 import os
 import warnings
-from pandas import DataFrame, concat
+from pandas import DataFrame, concat, read_pickle
 from pathlib import Path
 import pickle
 import shutil
@@ -9,7 +9,7 @@ from tarfile import TarFile
 
 from .tar_io import PickleMergerToTar
 
-from MAX_prediction.analysis.mxene import MXeneAnalyzers_beta, MXenesAnalyzersBase
+from MAX_prediction.analysis.mxenecollections import MXeneAnalyzers_beta, MXenesAnalyzersBase
 
 
 class PickleTarLoggerCollections:
@@ -206,6 +206,7 @@ class DataFramePickleTarLogger(PickleTarLoggerCollections):
         self._phase_index = {}
         self.df = None
         self.mode = "r"
+        self.format = "pkl"
 
         assert tmpfolder or tarfolder
 
@@ -254,12 +255,24 @@ class DataFramePickleTarLogger(PickleTarLoggerCollections):
         self._phases = value
         self._phase_index = {k: i for i, k in enumerate(value)}
 
+    def set_format(self, value):
+        assert value in ["csv", "pickle"]
+        self.format = value
+
     def _pklfile_index(self, index):
         assert self._phase_index[self.phases[index]] == index
-        return f"{self.phases[index]}.pkl"
+        return f"{self.phases[index]}.{self.format}"
 
     def _full_pklfilepath_index(self, index):
         return os.path.join(self.tmpfolder, self._pklfile_index(index))
+
+    def _df_to_disk(self, df, file):
+        if self.format == "csv":
+            df.to_csv(file)
+        elif self.format == "pkl":
+            df.to_pickle(file)
+        else:
+            raise ValueError(f"Unknown format {self.format} provided..")
 
     def write_file_index(self, index):
 
@@ -270,8 +283,8 @@ class DataFramePickleTarLogger(PickleTarLoggerCollections):
 
         with open(file, "wb") as ff:
             df_ = self.df[self.df[self.rcolumn] == phase]
-            df_.to_pickle(ff)
-
+            #df_.to_pickle(ff)
+            self._df_to_disk(df=df_,file=ff)
         self._tarmerger.add_pickle_file(file)
 
     def write(self):
@@ -288,9 +301,10 @@ class DataFramePickleTarLogger(PickleTarLoggerCollections):
         pklfile = self._pklfile_index(index=index)
         # assume Tarfile is already opened...
         extfile = self._tarmerger.tarlogger.read_pickle_file(file=pklfile)
-        with extfile as log:
-            # df_ = read_pickle(log)
-            df_ = pickle.load(log)
+        with extfile as tlog:
+            df_ = read_pickle(tlog)
+            # log = "".join([i for i in tlog])
+            # df_ = pickle.load(tlog)
         return df_
 
     def read(self):
