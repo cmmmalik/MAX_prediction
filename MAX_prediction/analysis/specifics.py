@@ -8,8 +8,8 @@ from pandas import DataFrame
 from pymatgen.core import Composition
 from utils_asedatabase import assertrowslen
 
-from MAX_prediction.Database import SearchEnginenewapi, SearcherdB
-from MAX_prediction.Database import converttoformula_chemsysrows
+# from MAX_prediction.Database import SearchEnginenewapi
+# from MAX_prediction.Database import converttoformula_chemsysrows
 from MAX_prediction.base import MAXSpecie, MAXSpecies, Pandasutils
 from MAX_prediction.core.specie import CoreSpecie
 from MAX_prediction.core.species import Species
@@ -192,6 +192,7 @@ class SidephasesCore(Species):
                       client=None,
                       collection_name: str = None
                       ):
+        from MAX_prediction.Database import SearchEnginenewapi
 
         self._database = SearchEnginenewapi(host=host,
                                             port=port,
@@ -218,6 +219,9 @@ class SidephasesCore(Species):
                                            db: dBcore or str = None,
                                            *args,
                                            **kwargs):
+
+        from MAX_prediction.Database import  SearcherdB
+
         if not db:
             db = self.asedb
         if isinstance(db, str):
@@ -347,6 +351,8 @@ class NewElements(Elements):
                       client=None,
                       collection_name: str = None
                       ):
+
+        from MAX_prediction.Database import SearchEnginenewapi
 
         self._database = SearchEnginenewapi(host=host,
                                             port=port,
