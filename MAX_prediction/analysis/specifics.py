@@ -28,6 +28,8 @@ def get_elements_chemical_systems(chemical_systems: list):
 
 
 class MXeneSpecie(CoreSpecie):
+    
+    __mxenefunc = MXene
 
     def __init__(self, formula: str, parentmax=None, termination: str = None, verbosity: int = 1):
         super(MXeneSpecie, self).__init__(formula=formula)
