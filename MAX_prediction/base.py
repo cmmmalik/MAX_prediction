@@ -94,7 +94,7 @@ class MAXSpecie(CoreSpecie):
         return self._genchemsys.unique_combinations_sizes(sizes=sizes)
 
     def get_mxene_formula(self):
-        Acomp = Pymcomp(self.elementsmap["A"])
+        Acomp = self.composition.__class__(self.elementsmap["A"])*self.composition[self.elementsmap["A"]]
         mxenecomp = (self.composition - Acomp).iupac_formula.replace(" ", "")
         return mxenecomp
 
@@ -196,8 +196,9 @@ class MAXSpecies(Species):
     def get_MXenes_formulas(self):
         mxenes = []
         for specie in self.composition:
-            Acomp = Pymcomp(specie.elementsmap["A"])
-            mxenecomp = (specie.composition - Acomp).iupac_formula.replace(" ", "")
+            # Acomp = Pymcomp(specie.elementsmap["A"])
+            # mxenecomp = (specie.composition - Acomp).iupac_formula.replace(" ", "")
+            mxenecomp = specie.get_mxene_formula()
             mxenes.append(mxenecomp)
         return mxenes
 
