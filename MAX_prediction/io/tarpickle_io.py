@@ -301,9 +301,10 @@ class DataFramePickleTarLogger(PickleTarLoggerCollections):
         pklfile = self._pklfile_index(index=index)
         # assume Tarfile is already opened...
         extfile = self._tarmerger.tarlogger.read_pickle_file(file=pklfile)
-        with extfile as log:
-            # df_ = read_pickle(log)
-            df_ = pickle.load(log)
+        with extfile as tlog:
+            df_ = read_pickle(tlog)
+            # log = "".join([i for i in tlog])
+            # df_ = pickle.load(tlog)
         return df_
 
     def read(self):
