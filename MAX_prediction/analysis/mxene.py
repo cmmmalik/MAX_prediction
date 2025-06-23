@@ -697,6 +697,8 @@ class MultiTermMXenReactions(MXeneReactions):
 
         sphase = concat([sphase, Series(np.append(self.mxene.formula, [self.tmxenes.formula]), name="phase")],
                         axis=0, ignore_index=True)
+        #drop duplicates
+        sphase = sphase[sphase != mxene.formula]
         print("No. of phases after (adding MXene and T-MXene compositions): {}".format(len(sphase)))
 
         print("sphases are:\n{}".format(sphase))
