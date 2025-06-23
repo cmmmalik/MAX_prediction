@@ -468,10 +468,10 @@ class MXeneReactions(MXeneBase):
         # reactants = [self.max.formula] + self.solution.formula.tolist()
         reactants = self._reactants_
         maxsize, els = self.get_number_allowed_products()
-        sizelimits = list(range(1, maxsize + 1))
+        sizelimits = list(range(1, maxsize))
 
-        reactions = []
-        reactions_2solver = []
+        reactions = [] # output from solver 1
+        reactions_2solver = [] # output from solver 2
         sphase = self.competing_phases.df.phase
 
         print("No. of phases originally= {}".format(len(sphase)))
@@ -490,29 +490,40 @@ class MXeneReactions(MXeneBase):
         gen_iterproducts = generate_products()
 
         if not self.nproc:
-            for i, products in gen_iterproducts:
 
-                if self.verbosity >= 2:
-                    print("product from enumeration: {}".format(products))
-
-                coeffs, coeffs_2balanc = self._balance(reactants=reactants,
-                                                       products=products,
-                                                       i=i,
-                                                       solvers_check=True)  # the two lists will be mutually exclusive.
-                if coeffs:
-                    reactions.append(coeffs)
-                elif coeffs_2balanc:
-                    reactions_2solver.append(coeffs_2balanc)
+            reactions, reactions_2solver = self._serialiter_balance_(productiter=gen_iterproducts,
+                                                                     reactants=reactants,
+                                                                     solvers_check=True,
+                                                                     verbosity=self.verbosity)
+            # for i, products in gen_iterproducts:
+            #
+            #     if self.verbosity >= 2:
+            #         print("product from enumeration: {}".format(products))
+            #
+            #     coeffs, coeffs_2balanc = self._balance(reactants=reactants,
+            #                                            products=products,
+            #                                            i=i,
+            #                                            solvers_check=True)  # the two lists will be mutually exclusive.
+            #     if coeffs:
+            #         reactions.append(coeffs)
+            #     elif coeffs_2balanc:
+            #         reactions_2solver.append(coeffs_2balanc)
 
         else:
-            func = partial(self._balance, reactants=reactants, solvers_check=True)
-
-            with Pool(self.nproc) as mp:
-                reactions, reactions_2solver = list(mp.imap(func=func, iterable=gen_iterproducts))
-
-            assert len(reactions) == len(reactions_2solver)
-            warnings.warn("Reactions from both solvers are merged...", UserWarning)
-            reactions = list(filter(lambda x: x[0] if x[0] else x[1], zip(reactions, reactions_2solver)))
+            # func = partial(self._balance, reactants=reactants, solvers_check=True)
+            #
+            # with Pool(self.nproc) as mp:
+            #     reactions, reactions_2solver = list(mp.imap(func=func, iterable=gen_iterproducts))
+            #
+            # assert len(reactions) == len(reactions_2solver)
+            # warnings.warn("Reactions from both solvers are merged...", UserWarning)
+            # reactions = list(filter(lambda x: x[0] if x[0] else x[1], zip(reactions, reactions_2solver)))
+            #
+            reactions = self._paralleliter_balance_(productiter=gen_iterproducts,
+                                                    reactants=reactants,
+                                                    solvers_check=True,
+                                                    nproc=self.nproc,
+                                                    chunksize=None)
 
         if return_df:
             if reactions_2solver:
